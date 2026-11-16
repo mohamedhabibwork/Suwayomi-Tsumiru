@@ -51,14 +51,16 @@ class ExtensionStoreScreen extends ConsumerWidget {
       ref.refresh(extensionStoreListProvider.future);
     }, ref.read(toastProvider));
 
-    Future<void> addKeiyoushiStore() => AppUtils.guard(() async {
+    Future<void> addPresetStore(String storeUrl) => AppUtils.guard(() async {
       await ref
           .read(extensionStoreRepositoryProvider)
-          .addStore(kKeiyoushiStoreUrl);
+          .addStore(storeUrl);
       if (!context.mounted) return;
       // ignore: unused_result
       ref.refresh(extensionStoreListProvider.future);
     }, ref.read(toastProvider));
+
+    Future<void> addKeiyoushiStore() => addPresetStore(kKeiyoushiStoreUrl);
 
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.extensionStores);
@@ -104,9 +106,13 @@ class ExtensionStoreScreen extends ConsumerWidget {
                 Expanded(
                   child: storeData.showUiWhenData(context, (data) {
                     final stores = data?.stores ?? const <ExtensionStore>[];
-                    final hasKeiyoushi = stores.any(
-                      (s) => s.indexUrl == kKeiyoushiStoreUrl,
-                    );
+                    final existingUrls = {
+                      for (final s in stores) s.indexUrl,
+                    };
+                    final availablePresets = [
+                      for (final preset in kCuratedExtensionStores)
+                        if (!existingUrls.contains(preset.indexUrl)) preset,
+                    ];
                     if (stores.isEmpty) {
                       return Emoticons(
                         title: context.l10n.extensionStoresEmpty,
@@ -118,7 +124,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                 onPressed: addKeiyoushiStore,
                                 icon: const Icon(FluentIcons.add_24_regular),
                                 label: const Text(
-                                  'Add Keiyoushi Store (Top 10 Extensions)',
+                                  'Add Default Stores (Manga, Videos & Else)',
                                 ),
                               ),
                             TextButton.icon(
@@ -142,22 +148,24 @@ class ExtensionStoreScreen extends ConsumerWidget {
                         KEdgeInsets.a8.size,
                       ),
                       children: [
-                        if (canManage && !hasKeiyoushi) ...[
-                          Card(
-                            child: ListTile(
-                              leading: const Icon(
-                                FluentIcons.star_24_regular,
-                              ),
-                              title: const Text('Add Keiyoushi Extension Store'),
-                              subtitle: const Text(
-                                'Includes Top 10 popular manga & webtoon extensions',
-                              ),
-                              trailing: FilledButton(
-                                onPressed: addKeiyoushiStore,
-                                child: Text(context.l10n.add),
+                        if (canManage && availablePresets.isNotEmpty) ...[
+                          for (final preset in availablePresets)
+                            Card(
+                              child: ListTile(
+                                leading: Icon(
+                                  preset.category == ResourceCategory.videos
+                                      ? FluentIcons.video_24_regular
+                                      : FluentIcons.star_24_regular,
+                                ),
+                                title: Text(preset.name),
+                                subtitle: Text(preset.subtitle),
+                                trailing: FilledButton(
+                                  onPressed: () =>
+                                      addPresetStore(preset.indexUrl),
+                                  child: Text(context.l10n.add),
+                                ),
                               ),
                             ),
-                          ),
                           const SizedBox(height: 8),
                         ],
                         SettingsGroupCard(

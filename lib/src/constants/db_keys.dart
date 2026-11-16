@@ -24,6 +24,16 @@ enum DBKeys {
   migrationSourceAscending(true),
   migrationSourceObsoleteOnly(false),
   extensionLanguageFilter(["installed", "update", "en", "all"]),
+  selectedMediaResources(<String>[
+    'video_hianime',
+    'video_miruro',
+    'video_animepahe',
+    'comic_webtoon',
+    'comic_readcomics',
+    'comic_tapas',
+    'other_royalroad',
+    'other_novelupdates',
+  ]),
   sourceLastUsed(null),
   sourceRecentIds(<String>[]),
   // Fresh installs are seeded dark by seedFirstRunPreferences.

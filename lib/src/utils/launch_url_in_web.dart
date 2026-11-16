@@ -36,3 +36,48 @@ Future<void> launchUrlInWeb(
     }
   }
 }
+
+/// Opens an http/https resource in the embedded in-app browser (SFSafariViewController on iOS)
+/// with full HTML5 video & media playback, falling back to external browser if unsupported.
+Future<void> launchUrlInAppBrowser(
+  BuildContext context,
+  String url, [
+  Toast? toast,
+  String? failureMessage,
+]) async {
+  final uri = Uri.tryParse(url);
+  final scheme = uri?.scheme.toLowerCase();
+  if (uri == null || (scheme != 'http' && scheme != 'https')) {
+    if (context.mounted) {
+      toast?.showError(failureMessage ?? context.l10n.errorLaunchURL(url));
+    }
+    return;
+  }
+  bool launched = false;
+  try {
+    launched = await launchUrl(
+      uri,
+      mode: LaunchMode.inAppBrowserView,
+      webOnlyWindowName: "_blank",
+    );
+  } catch (_) {
+    launched = false;
+  }
+  if (!launched) {
+    try {
+      launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+        webOnlyWindowName: "_blank",
+      );
+    } catch (_) {
+      launched = false;
+    }
+  }
+  if (!launched) {
+    await Clipboard.setData(ClipboardData(text: url));
+    if (context.mounted) {
+      toast?.showError(failureMessage ?? context.l10n.errorLaunchURL(url));
+    }
+  }
+}

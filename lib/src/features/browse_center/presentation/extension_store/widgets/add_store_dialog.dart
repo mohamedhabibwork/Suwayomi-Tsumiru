@@ -82,19 +82,27 @@ class AddStoreDialog extends HookConsumerWidget {
                   : serverError.value,
             ),
           ),
-          if (!existingUrls.contains(kKeiyoushiStoreUrl)) ...[
-            const SizedBox(height: 12),
-            ActionChip(
-              label: const Text('Use Keiyoushi Store (Top 10 Extensions)'),
-              onPressed: submitting.value
-                  ? null
-                  : () {
-                      controller.text = kKeiyoushiStoreUrl;
-                      url.value = kKeiyoushiStoreUrl;
-                      if (serverError.value != null) serverError.value = null;
-                    },
-            ),
-          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final preset in kCuratedExtensionStores)
+                if (!existingUrls.contains(preset.indexUrl))
+                  ActionChip(
+                    label: Text(preset.name),
+                    onPressed: submitting.value
+                        ? null
+                        : () {
+                            controller.text = preset.indexUrl;
+                            url.value = preset.indexUrl;
+                            if (serverError.value != null) {
+                              serverError.value = null;
+                            }
+                          },
+                  ),
+            ],
+          ),
         ],
       ),
       actions: [

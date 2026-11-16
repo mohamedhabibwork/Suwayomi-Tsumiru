@@ -24,6 +24,7 @@ import 'features/settings/presentation/appearance/widgets/app_theme_selector/app
 import 'features/settings/presentation/appearance/widgets/is_true_black/is_true_black_tile.dart';
 import 'features/settings/presentation/general/widgets/force_portrait_tile.dart';
 import 'features/settings/presentation/incognito/incognito_mode.dart';
+import 'features/settings/presentation/security/app_lock_gate.dart';
 import 'features/settings/widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'global_providers/global_providers.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -117,30 +118,32 @@ class TsumiruApp extends HookConsumerWidget {
               : const ScrollbarThemeData(),
           child: ReduceMotionScope(
             child: DesktopWindowScaffold(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Offstage(
-                    offstage: sessionChanging,
-                    child: TickerMode(
-                      enabled: !sessionChanging,
-                      child: ReauthBannerHost(
-                        child: kIsWeb
-                            ? _WebTitleBridge(
-                                routes: routes,
-                                child: _IncognitoNotificationBridge(
-                                  child: toastWrapped,
-                                ),
-                              )
-                            : _IncognitoNotificationBridge(child: toastWrapped),
+              child: AppLockGate(
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Offstage(
+                      offstage: sessionChanging,
+                      child: TickerMode(
+                        enabled: !sessionChanging,
+                        child: ReauthBannerHost(
+                          child: kIsWeb
+                              ? _WebTitleBridge(
+                                  routes: routes,
+                                  child: _IncognitoNotificationBridge(
+                                    child: toastWrapped,
+                                  ),
+                                )
+                              : _IncognitoNotificationBridge(child: toastWrapped),
+                        ),
                       ),
                     ),
-                  ),
-                  if (sessionChanging)
-                    const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    ),
-                ],
+                    if (sessionChanging)
+                      const Scaffold(
+                        body: Center(child: CircularProgressIndicator()),
+                      ),
+                  ],
+                ),
               ),
             ),
           ),

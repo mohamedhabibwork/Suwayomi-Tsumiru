@@ -33,6 +33,7 @@ import '../../../migration/presentation/screens/migration_window.dart';
 import '../../../offline/data/server_reachability.dart';
 import '../../../offline/presentation/server_unreachable_banner.dart';
 import '../../../settings/presentation/appearance/widgets/show_recommendations/show_recommendations_tile.dart';
+import '../../../settings/presentation/security/security_settings_provider.dart';
 import '../../domain/chapter/chapter_model.dart';
 import '../../domain/manga/manga_model.dart';
 import '../../widgets/chapter_actions/multi_chapters_actions_bottom_app_bar.dart';
@@ -178,6 +179,7 @@ class MangaDetailsScreen extends HookConsumerWidget {
         launchUrlInWeb(context, url, ref.read(toastProvider));
 
     Future<void> shareSeries(BuildContext context, MangaDto manga) async {
+      if (ref.read(disableContentSharingProvider) ?? false) return;
       final url = manga.realUrl;
       if (url == null) return;
       if (kIsWeb || isDesktopPlatform) {

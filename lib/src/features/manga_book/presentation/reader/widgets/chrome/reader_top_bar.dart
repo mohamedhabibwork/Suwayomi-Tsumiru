@@ -18,6 +18,7 @@ import '../../../../../../utils/platform/platform_runtime.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../settings/presentation/koreader_sync/data/koreader_sync_repository.dart';
+import '../../../../../settings/presentation/security/security_settings_provider.dart';
 import '../../../../domain/chapter/chapter_model.dart';
 import '../../../../domain/manga/manga_model.dart';
 import '../../../manga_details/server_web_url.dart';
@@ -146,7 +147,8 @@ class ReaderTopBar extends ConsumerWidget {
                     label: context.l10n.openChapterInWebView,
                   ),
                 ),
-                if (link.isNotBlank)
+                if (link.isNotBlank &&
+                    !(ref.watch(disableContentSharingProvider) ?? false))
                   PopupMenuItem(
                     value: 'share',
                     child: ChapterMenuRow(

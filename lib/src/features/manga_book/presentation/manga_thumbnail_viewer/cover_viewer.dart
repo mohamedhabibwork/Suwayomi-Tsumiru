@@ -20,6 +20,7 @@ import '../../../../utils/motion/reduce_motion.dart';
 import '../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../auth/data/auth_credentials_store.dart';
+import '../../../settings/presentation/security/security_settings_provider.dart';
 import '../../domain/manga/manga_model.dart';
 import '../manga_details/controller/manga_details_controller.dart';
 import '../manga_details/widgets/edit_cover_picker.dart';
@@ -101,6 +102,7 @@ Future<void> _shareCover(
   String imageUrl,
   String? coverVersion,
 ) async {
+  if (ref.read(disableContentSharingProvider) ?? false) return;
   final toast = ref.read(toastProvider);
   final errorMsg = context.l10n.errorSomethingWentWrong;
   final sessionCurrent = ref

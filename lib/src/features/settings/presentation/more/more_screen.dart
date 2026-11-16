@@ -30,6 +30,7 @@ import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../connection/connection_status.dart';
 import '../incognito/incognito_mode.dart';
 import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../security/security_settings_dialog.dart';
 import '../server/widget/client/server_port_tile/server_port_tile.dart';
 import '../server/widget/client/server_url_tile/server_url_tile.dart';
 
@@ -133,6 +134,18 @@ class MoreScreen extends ConsumerWidget {
                   ? const PhoneSearchBoxBottom(origin: PhoneSearchOrigin.plain)
                   : null,
               actions: [
+                if (incognito)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Chip(
+                      avatar: const Icon(
+                        FluentIcons.incognito_24_regular,
+                        size: 16,
+                      ),
+                      label: Text(context.l10n.incognitoMode),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
                 if (phone && !persistentBox)
                   const PhoneSearchEntry(origin: PhoneSearchOrigin.plain),
               ],
@@ -192,6 +205,12 @@ class MoreScreen extends ConsumerWidget {
                       trailing: const Icon(FluentIcons.chevron_right_24_regular),
                       onTap: () =>
                           const AppearanceSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: FluentIcons.shield_lock_24_regular,
+                      title: 'Security',
+                      trailing: const Icon(FluentIcons.chevron_right_24_regular),
+                      onTap: () => showSecuritySettingsDialog(context),
                     ),
                     SettingsGroupRow(
                       icon: FluentIcons.settings_24_regular,

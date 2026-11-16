@@ -25,6 +25,7 @@ import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../widgets/cover_cache/cover_cache.dart';
 import '../../../../../../widgets/server_image.dart';
 import '../../../../../auth/data/auth_credentials_store.dart';
+import '../../../../../settings/presentation/security/security_settings_provider.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import 'image_clipboard.dart';
 
@@ -143,8 +144,10 @@ Future<void> showReaderPageActionsSheet({
         };
       }
 
+      final sharingDisabled = ref.read(disableContentSharingProvider) ?? false;
+
       VoidCallback? shareAction(Future<File> Function() resolve) {
-        if (!isMobile) return null;
+        if (!isMobile || sharingDisabled) return null;
         return () async {
           final toast = ref.read(toastProvider);
           final errorMsg = context.l10n.errorSomethingWentWrong;

@@ -24,6 +24,7 @@ import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../../history/presentation/history_controller.dart';
 import '../../../../library/domain/category/category_model.dart';
+import '../../../../library/presentation/category/controller/edit_category_controller.dart';
 import '../../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../data/manga_book/manga_book_repository.dart';
 import '../../../domain/chapter/chapter_model.dart';
@@ -68,30 +69,22 @@ class MangaWithId extends _$MangaWithId {
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       mangaId: mangaId,
-      // Complete device copies render from the catalog immediately while the server refreshes in background.
+      // Cached or downloaded copies render from the catalog immediately while the server refreshes in background.
       deviceCopyOnDisk: offlineDb == null
           ? null
-          : () async {
-              final chapters = await offlineDb.chaptersForManga(mangaId);
-              return chapters.any(
-                (c) => c.deviceState == OfflineDeviceState.downloaded,
-              );
-            },
+          : () async => await offlineDb.mangaById(mangaId) != null,
       onServerAnswer: (server) {
         if (!current() || buildId != _buildId) return;
         state = AsyncData(server);
-        if (server.user.inLibrary) {
-          unawaited(
-            sync?.syncManga(server, fetchedAtGen: fetchGen) ?? Future.value(),
-          );
-        }
+        unawaited(
+          sync?.syncManga(server, fetchedAtGen: fetchGen) ?? Future.value(),
+        );
       },
     );
     // Check disposal before keeping this cached across detail-page visits.
     if (!current()) return null;
     ref.keepAlive();
-    // Don't mirror browsed (non-library) manga into the offline catalog.
-    if (manga != null && manga.user.inLibrary && fromServer) {
+    if (manga != null && fromServer) {
       unawaited(
         sync?.syncManga(manga, fetchedAtGen: fetchGen) ?? Future.value(),
       );
@@ -106,8 +99,11 @@ class MangaWithId extends _$MangaWithId {
 
 @riverpod
 class MangaChapterList extends _$MangaChapterList {
+  int _buildId = 0;
+
   @override
   Future<List<ChapterDto>?> build({required int mangaId}) async {
+    final buildId = ++_buildId;
     final sessionCurrent = watchAuthSession(ref);
     bool current() => ref.mounted && sessionCurrent();
     if (!current()) return null;
@@ -119,6 +115,7 @@ class MangaChapterList extends _$MangaChapterList {
     var didSourceFetch = false;
     // Capture before await; the provider may be disposed while fetching.
     final sync = ref.read(offlineSyncProvider);
+    final offlineDb = ref.watch(offlineReadDatabaseProvider);
     // Mirror only genuine server responses — fallback chapter DTOs carry
     // stub fields (lastReadAt '0') that would clobber real mirrored data.
     var fromServer = false;
@@ -142,12 +139,28 @@ class MangaChapterList extends _$MangaChapterList {
         }
         return stored;
       },
-      db: ref.watch(offlineReadDatabaseProvider),
+      db: offlineDb,
       offlineEnabled: ref.watch(offlineActiveProvider),
       offlineFirst:
           ref.watch(viewOfflineNowProvider) ||
           ref.watch(serverUnreachableProvider),
       mangaId: mangaId,
+      deviceCopyOnDisk: offlineDb == null
+          ? null
+          : () async => (await offlineDb.chaptersForManga(mangaId)).isNotEmpty,
+      onServerAnswer: (serverChapters) {
+        if (!current() || buildId != _buildId) return;
+        state = AsyncData(serverChapters);
+        unawaited(
+          (sync?.syncChapters(serverChapters) ?? Future.value(<int>{})).then(
+            (nr) {
+              if (current()) {
+                reconcileManga(ref, mangaId, newlyReadChapterIds: nr);
+              }
+            },
+          ),
+        );
+      },
     );
     if (!current()) return null;
     ref.keepAlive();
@@ -836,20 +849,76 @@ class MangaChapterFilterBookmarked extends _$MangaChapterFilterBookmarked
 
 @riverpod
 class MangaCategoryList extends _$MangaCategoryList {
+  Future<Map<String, CategoryDto>?> _offlineCategories() async {
+    final offlineDb = ref.read(offlineReadDatabaseProvider);
+    if (offlineDb == null) return null;
+    final ids =
+        (await offlineDb.categoriesForManga(mangaId)).map((c) => c.id).toSet();
+    final categories =
+        ref.read(categoryControllerProvider).value ?? const <CategoryDto>[];
+    return {
+      for (final c in categories)
+        if (ids.contains(c.id)) '${c.id}': c,
+    };
+  }
+
   @override
   FutureOr<Map<String, CategoryDto>?> build(int mangaId) async {
-    final result = await ref
-        .watch(mangaBookRepositoryProvider)
-        .getMangaCategoryList(mangaId: mangaId);
-    return {for (CategoryDto i in (result ?? <CategoryDto>[])) "${i.id}": i};
+    final offlineDb = ref.watch(offlineReadDatabaseProvider);
+    final offlineFirst =
+        ref.watch(viewOfflineNowProvider) ||
+        ref.watch(serverUnreachableProvider);
+    if (offlineFirst && offlineDb != null) {
+      return _offlineCategories();
+    }
+    try {
+      final result = await ref
+          .watch(mangaBookRepositoryProvider)
+          .getMangaCategoryList(mangaId: mangaId);
+      if (offlineDb != null && result != null) {
+        unawaited(
+          offlineDb.replaceMangaCategories(
+            mangaId,
+            result.map((c) => c.id).toList(),
+          ),
+        );
+      }
+      return {for (CategoryDto i in (result ?? <CategoryDto>[])) "${i.id}": i};
+    } catch (_) {
+      if (offlineDb != null) {
+        return _offlineCategories();
+      }
+      rethrow;
+    }
   }
 
   Future<void> refresh() async {
+    final offlineDb = ref.read(offlineReadDatabaseProvider);
+    final offlineFirst =
+        ref.read(viewOfflineNowProvider) ||
+        ref.read(serverUnreachableProvider);
+    if (offlineFirst && offlineDb != null) {
+      state = AsyncData(await _offlineCategories());
+      return;
+    }
     final result = await AsyncValue.guard(
       () => ref
           .read(mangaBookRepositoryProvider)
           .getMangaCategoryList(mangaId: mangaId),
     );
+    if (result.hasError && offlineDb != null) {
+      state = AsyncData(await _offlineCategories());
+      return;
+    }
+    final list = result.value;
+    if (offlineDb != null && list != null) {
+      unawaited(
+        offlineDb.replaceMangaCategories(
+          mangaId,
+          list.map((c) => c.id).toList(),
+        ),
+      );
+    }
     state = result.copyWithData(
       (data) => {for (CategoryDto i in (data ?? <CategoryDto>[])) "${i.id}": i},
     );

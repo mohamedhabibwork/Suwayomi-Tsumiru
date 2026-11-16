@@ -46,17 +46,17 @@ void main() {
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
       expect(submissions, isEmpty);
-      expect(find.text('Enter a code'), findsOneWidget);
-      await fill(tester, [' code ', ' alice ', ' secret ', 'different']);
+      expect(find.text("Username can't be empty"), findsOneWidget);
+      await fill(tester, [' alice ', ' secret ', 'different', '']);
       await tester.tap(find.byType(ElevatedButton));
       await tester.pump();
       expect(find.text('Passwords do not match'), findsOneWidget);
       expect(submissions, isEmpty);
-      await tester.enterText(find.byType(TextFormField).last, ' secret ');
+      await tester.enterText(find.byType(TextFormField).at(2), ' secret ');
       await tester.tap(find.byType(ElevatedButton));
       await tester.pumpAndSettle();
       expect(submissions, [
-        ['code', 'alice', ' secret '],
+        ['', 'alice', ' secret '],
       ]);
       expect(find.byType(AlertDialog), findsNothing);
     },

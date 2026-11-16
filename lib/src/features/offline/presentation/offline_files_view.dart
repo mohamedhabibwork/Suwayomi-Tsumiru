@@ -21,6 +21,7 @@ import '../../../widgets/selection_action_bar.dart';
 import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
 import '../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
+import '../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
 import '../data/account_storage_recovery_state.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
@@ -34,6 +35,22 @@ import 'offline_series_chapters_screen.dart';
 import 'offline_settings_format.dart';
 
 typedef _SeriesRow = OfflineSeriesEntry;
+
+final _offlineCategoriesProvider =
+    FutureProvider.autoDispose<List<OfflineCategory>>((ref) async {
+      final db = ref.watch(offlineReadDatabaseProvider);
+      if (db == null) return const [];
+      return db.allOfflineCategories();
+    });
+
+final _offlineMangaCategoryMapProvider =
+    FutureProvider.autoDispose<Map<int, List<OfflineCategory>>>((ref) async {
+      final db = ref.watch(offlineReadDatabaseProvider);
+      final series =
+          ref.watch(offlineSeriesProvider).value ?? const <OfflineSeriesEntry>[];
+      if (db == null || series.isEmpty) return const {};
+      return db.categoriesForMangas({for (final s in series) s.manga.id});
+    });
 
 class OfflineFilesView extends HookConsumerWidget {
   const OfflineFilesView({super.key});
@@ -69,11 +86,26 @@ class OfflineFilesView extends HookConsumerWidget {
     if (!ref.watch(offlineEnabledProvider)) {
       return Center(child: Text(context.l10n.offlineNotAvailable));
     }
-    final series =
+    final allSeries =
         ref.watch(offlineSeriesProvider).value ?? const <OfflineSeriesEntry>[];
+    final offlineCategories =
+        ref.watch(_offlineCategoriesProvider).value ?? const <OfflineCategory>[];
+    final mangaCategories =
+        ref.watch(_offlineMangaCategoryMapProvider).value ??
+        const <int, List<OfflineCategory>>{};
+    final selectedCategoryId = useState<int?>(null);
+    final series = selectedCategoryId.value == null
+        ? allSeries
+        : allSeries
+              .where(
+                (s) => (mangaCategories[s.manga.id] ?? const []).any(
+                  (c) => c.id == selectedCategoryId.value,
+                ),
+              )
+              .toList();
     final totalBytes = ref.watch(offlineUsageBytesProvider).value ?? 0;
     final selection = useState<Set<int>>(const {});
-    final liveIds = series.map((s) => s.manga.id).toSet();
+    final liveIds = allSeries.map((s) => s.manga.id).toSet();
     final selectedIds = selection.value.intersection(liveIds);
     final selecting = selectedIds.isNotEmpty;
     final selectionFocus = useFocusNode();
@@ -103,7 +135,7 @@ class OfflineFilesView extends HookConsumerWidget {
       selection.value = next;
     }
 
-    if (series.isEmpty) {
+    if (allSeries.isEmpty) {
       return Emoticons(title: context.l10n.offlineNoFiles);
     }
 
@@ -248,11 +280,45 @@ class OfflineFilesView extends HookConsumerWidget {
                             title: Text(context.l10n.offlineStorageUsage),
                             trailing: Text(formatBytes(totalBytes)),
                           ),
+                        if (offlineCategories.isNotEmpty)
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              spacing: 8,
+                              children: [
+                                ChoiceChip(
+                                  label: Text(context.l10n.all),
+                                  selected: selectedCategoryId.value == null,
+                                  onSelected: (_) =>
+                                      selectedCategoryId.value = null,
+                                ),
+                                for (final cat in offlineCategories)
+                                  ChoiceChip(
+                                    label: Text(cat.name),
+                                    selected:
+                                        selectedCategoryId.value == cat.id,
+                                    onSelected: (selected) =>
+                                        selectedCategoryId.value = selected
+                                        ? cat.id
+                                        : null,
+                                  ),
+                              ],
+                            ),
+                          ),
                         if (!desktop) const Divider(height: 1),
                       ],
                     );
                   }
                   final s = series[index - 1];
+                  final assignedCats =
+                      mangaCategories[s.manga.id] ?? const <OfflineCategory>[];
+                  final categoryLabel = assignedCats.isEmpty
+                      ? null
+                      : assignedCats.map((c) => c.name).join(', ');
                   final selected = selectedIds.contains(s.manga.id);
                   final savedLine = s.inFlight > 0
                       ? '${context.l10n.offlineDownloadingCount(s.inFlight)} · ${context.l10n.nChapters(s.downloaded)}'
@@ -318,7 +384,10 @@ class OfflineFilesView extends HookConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          _ruleLabel(context, s.manga),
+                          [
+                            if (categoryLabel != null) categoryLabel,
+                            _ruleLabel(context, s.manga),
+                          ].join(' · '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -476,6 +545,13 @@ class OfflineFilesView extends HookConsumerWidget {
           ),
         ),
         PopupMenuItem(
+          value: 'category',
+          child: ChapterMenuRow(
+            icon: FluentIcons.tag_24_regular,
+            label: context.l10n.editCategory,
+          ),
+        ),
+        PopupMenuItem(
           value: 'select',
           child: ChapterMenuRow(
             icon: Icons.check_box_outlined,
@@ -515,6 +591,15 @@ class OfflineFilesView extends HookConsumerWidget {
     switch (picked) {
       case 'view':
         MangaRoute(mangaId: manga.id).push(context);
+      case 'category':
+        await showDialog<void>(
+          context: context,
+          builder: (_) =>
+              EditMangaCategoryDialog(mangaId: manga.id, title: manga.title),
+          animationStyle: context.motionStyle,
+        );
+        ref.invalidate(_offlineCategoriesProvider);
+        ref.invalidate(_offlineMangaCategoryMapProvider);
       case 'select':
         onSelect();
       case 'stop':
@@ -634,6 +719,23 @@ class OfflineFilesView extends HookConsumerWidget {
                         : null,
                   ),
                   const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(FluentIcons.tag_24_regular),
+                    title: Text(sheetContext.l10n.editCategory),
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      await showDialog<void>(
+                        context: context,
+                        builder: (_) => EditMangaCategoryDialog(
+                          mangaId: manga.id,
+                          title: manga.title,
+                        ),
+                        animationStyle: context.motionStyle,
+                      );
+                      ref.invalidate(_offlineCategoriesProvider);
+                      ref.invalidate(_offlineMangaCategoryMapProvider);
+                    },
+                  ),
                   ListTile(
                     leading: const Icon(FluentIcons.bookmark_off_24_regular),
                     title: Text(sheetContext.l10n.manageDownloadsStopKeep),

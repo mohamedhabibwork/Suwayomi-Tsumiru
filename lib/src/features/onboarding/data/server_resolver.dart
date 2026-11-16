@@ -134,6 +134,12 @@ List<String> connectionCandidates(String rawInput) {
     if (uri.hasPort) {
       return _dedup([_assemble(uri.scheme, uri.host, uri.port, uri.path)]);
     }
+    if (uri.scheme == 'https') {
+      return _dedup([
+        _assemble(uri.scheme, uri.host, null, uri.path),
+        _assemble(uri.scheme, uri.host, kDefaultSuwayomiPort, uri.path),
+      ]);
+    }
     // An explicit scheme without a port still tries the default Suwayomi port first.
     return _dedup([
       _assemble(uri.scheme, uri.host, kDefaultSuwayomiPort, uri.path),

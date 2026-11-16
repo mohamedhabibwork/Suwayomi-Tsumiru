@@ -592,12 +592,7 @@ class _ServerStep extends HookConsumerWidget {
     final cs = context.theme.colorScheme;
     final isWeb = ref.watch(isWebProvider);
     final urlController = useTextEditingController(
-      text: () {
-        final stored = ref.read(serverExternalUrlProvider);
-        return (stored == null || stored == DBKeys.serverUrl.initial)
-            ? ''
-            : stored;
-      }(),
+      text: ref.read(serverExternalUrlProvider) ?? DBKeys.serverUrl.initial,
     );
     final preferences = ref.watch(sharedPreferencesProvider);
     final pendingProbe = useMemoized(
@@ -666,7 +661,8 @@ class _ServerStep extends HookConsumerWidget {
     }
 
     Future<void> openCodeDialog(AccountCodeMode mode) async {
-      final base = resolvedUrl.value;
+      final base =
+          resolvedUrl.value ?? validServerBaseUrl(urlController.text.trim());
       if (base == null || base.isEmpty) return;
       await showDialog<void>(
         context: context,
@@ -1126,7 +1122,7 @@ class _ServerStep extends HookConsumerWidget {
           autocorrect: false,
           decoration: InputDecoration(
             labelText: context.l10n.serverUrl,
-            hintText: 'http://192.168.0.10:4567',
+            hintText: DBKeys.serverUrl.initial,
             border: const OutlineInputBorder(),
             prefixIcon: const Icon(FluentIcons.server_24_regular),
           ),
@@ -1182,6 +1178,49 @@ class _ServerStep extends HookConsumerWidget {
           ),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
         ),
+        if (state.value == _TestState.idle &&
+            validServerBaseUrl(urlController.text.trim()) != null) ...[
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () => openCodeDialog(AccountCodeMode.registration),
+                  icon: const Icon(FluentIcons.person_add_24_regular),
+                  label: Text(context.l10n.accountRegistrationTitle),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: busy
+                      ? null
+                      : () {
+                          final base = validServerBaseUrl(
+                            urlController.text.trim(),
+                          );
+                          if (base == null) return;
+                          resolvedUrl.value = base;
+                          if (!userChangedAuth.value) {
+                            authChoice.value = AuthType.uiLogin;
+                          }
+                          state.value = _TestState.needsLogin;
+                        },
+                  icon: const Icon(FluentIcons.arrow_enter_20_regular),
+                  label: Text(context.l10n.onboardingSignIn),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
         ..._buildTestStatus(
           context,

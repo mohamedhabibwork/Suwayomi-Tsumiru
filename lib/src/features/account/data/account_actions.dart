@@ -6,6 +6,7 @@ import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
 import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
+import '../../auth/data/auth_recovery_target.dart';
 import '../../auth/data/auth_state.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
@@ -122,6 +123,8 @@ class AccountActions {
       await store.clearBasicCredentials();
       ref.read(authUsernameProvider.notifier).update(canonicalUsername);
       ref.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);
+      ref.read(authRecoveryTargetProvider.notifier).set(null);
+      ref.read(needsReauthProvider.notifier).set(false);
     }, expectedEpoch: store.serverEpoch);
   }
 

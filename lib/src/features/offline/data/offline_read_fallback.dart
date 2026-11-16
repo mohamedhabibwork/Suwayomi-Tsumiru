@@ -364,15 +364,26 @@ Future<List<ChapterDto>?> chaptersWithOfflineFallback({
   required int mangaId,
   Duration fetchTimeout = kOfflineFallbackFetchTimeout,
   bool offlineFirst = false,
+  Future<bool> Function()? deviceCopyOnDisk,
+  void Function(List<ChapterDto> value)? onServerAnswer,
   void Function()? onCatalogServe,
 }) async {
   Future<bool> canServe() async =>
       db != null && (await db.chaptersForManga(mangaId)).isNotEmpty;
 
-  if (offlineEnabled && offlineFirst && db != null) {
+  if (offlineEnabled && db != null) {
     final rows = await db.chaptersForManga(mangaId);
-    if (rows.isNotEmpty) {
+    final deviceFirst =
+        rows.isNotEmpty &&
+        !offlineFirst &&
+        onServerAnswer != null &&
+        deviceCopyOnDisk != null &&
+        await deviceCopyOnDisk();
+    if (rows.isNotEmpty && (offlineFirst || deviceFirst)) {
       onCatalogServe?.call();
+      if (deviceFirst) {
+        _refreshInBackground(fetch: fetch, onAnswer: onServerAnswer);
+      }
       return [for (final c in rows) offlineChapterToDto(c)];
     }
   }

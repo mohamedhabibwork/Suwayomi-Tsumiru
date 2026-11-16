@@ -25,6 +25,7 @@ class OnboardingComplete extends _$OnboardingComplete
 bool serverConfiguredForOnboarding(String? serverUrl) =>
     serverUrl != null &&
     serverUrl.isNotEmpty &&
+    serverUrl != 'http://127.0.0.1' &&
     serverUrl != DBKeys.serverUrl.initial;
 
 /// Seeds only unset onboarding state; new installs default to Dark unless a theme is saved.

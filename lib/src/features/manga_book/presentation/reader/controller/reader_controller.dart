@@ -89,9 +89,25 @@ Future<ChapterPagesDto?> chapterPages(Ref ref, {required int chapterId}) async {
       );
     }
   }
-  return ref
+  final remote = await ref
       .watch(mangaBookRepositoryProvider)
       .getChapterPages(chapterId: chapterId);
+  if (offlineDb != null && remote != null && remote.pages.isNotEmpty) {
+    final starter = ref.read(downloadStarterProvider);
+    unawaited(() async {
+      try {
+        final ch = await offlineDb.chapterById(chapterId);
+        if (ch != null && ch.deviceState == OfflineDeviceState.none) {
+          await offlineDb.setChapterDeviceState(
+            chapterId,
+            OfflineDeviceState.queued,
+          );
+          await starter();
+        }
+      } catch (_) {}
+    }());
+  }
+  return remote;
 }
 
 @riverpod

@@ -8,8 +8,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../../constants/app_sizes.dart';
+import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/async_buttons/async_checkbox_list_tile.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../library/data/default_category.dart';
@@ -68,6 +70,26 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                 final repo = ref.read(
                                   mangaBookRepositoryProvider,
                                 );
+                                final offlineDb = ref.read(
+                                  offlineReadDatabaseProvider,
+                                );
+                                Future<void> syncLocalCategory() async {
+                                  if (offlineDb == null) return;
+                                  final existing =
+                                      (await offlineDb.categoriesForManga(
+                                        mangaId,
+                                      )).map((c) => c.id).toSet();
+                                  if (value) {
+                                    existing.add(category.id);
+                                  } else {
+                                    existing.remove(category.id);
+                                  }
+                                  await offlineDb.replaceMangaCategories(
+                                    mangaId,
+                                    existing.toList(),
+                                  );
+                                }
+
                                 try {
                                   value
                                       ? await repo.addMangaToCategory(
@@ -78,10 +100,19 @@ class EditMangaCategoryDialog extends HookConsumerWidget {
                                           mangaId,
                                           category.id,
                                         );
+                                  await syncLocalCategory();
                                 } catch (e) {
-                                  // Rethrowing lets the checkbox restore its previous value.
-                                  toast?.showError(e.toString());
-                                  rethrow;
+                                  final cause = e is OperationMessageException
+                                      ? e.exception
+                                      : e;
+                                  if (offlineDb != null &&
+                                      isConnectionError(cause)) {
+                                    await syncLocalCategory();
+                                  } else {
+                                    // Rethrowing lets the checkbox restore its previous value.
+                                    toast?.showError(e.toString());
+                                    rethrow;
+                                  }
                                 }
                                 // The caller refreshes on close if the dialog was dismissed.
                                 if (!context.mounted) return;

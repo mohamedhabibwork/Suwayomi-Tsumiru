@@ -78,29 +78,24 @@ class AccountCodeDialog extends HookWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextFormField(
-                controller: code,
-                enabled: !busy.value,
-                obscureText: false,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: registration
-                      ? context.l10n.accountRegistrationCode
-                      : context.l10n.accountRecoveryCode,
-                  helperText: registration
-                      ? 'Optional when open registration is enabled'
+              if (!registration) ...[
+                TextFormField(
+                  controller: code,
+                  enabled: !busy.value,
+                  obscureText: false,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: context.l10n.accountRecoveryCode,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? context.l10n.accountCodeRequired
                       : null,
-                  border: const OutlineInputBorder(),
                 ),
-                validator: registration
-                    ? null
-                    : (value) => value == null || value.trim().isEmpty
-                    ? context.l10n.accountCodeRequired
-                    : null,
-              ),
-              const Gap(8),
+                const Gap(8),
+              ],
               if (registration) ...[
                 TextFormField(
                   controller: username,
@@ -141,7 +136,10 @@ class AccountCodeDialog extends HookWidget {
                 obscureText: true,
                 autocorrect: false,
                 enableSuggestions: false,
-                textInputAction: TextInputAction.next,
+                textInputAction: registration
+                    ? TextInputAction.next
+                    : TextInputAction.done,
+                onFieldSubmitted: registration ? null : (_) => submit(),
                 decoration: InputDecoration(
                   labelText: context.l10n.accountConfirmPassword,
                   border: const OutlineInputBorder(),
@@ -152,6 +150,23 @@ class AccountCodeDialog extends HookWidget {
                     ? context.l10n.accountPasswordsDoNotMatch
                     : null,
               ),
+              if (registration) ...[
+                const Gap(8),
+                TextFormField(
+                  controller: code,
+                  enabled: !busy.value,
+                  obscureText: false,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.accountRegistrationCode,
+                    helperText: 'Optional — leave blank for open registration',
+                    border: const OutlineInputBorder(),
+                  ),
+                ),
+              ],
               const Gap(8),
               if (error.value != null)
                 SelectableText(

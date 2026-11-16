@@ -61,7 +61,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
+      expect(find.text('Welcome to Mangaka'), findsOneWidget);
       expect(find.text('Next'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
       expect(find.byType(Image), findsNWidgets(1));
@@ -69,6 +69,16 @@ void main() {
       await _tap(tester, find.text('Next'));
       expect(find.text('Connect your server'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
+
+      final urlField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == 'Server URL',
+      );
+      expect(
+        tester.widget<TextField>(urlField).controller?.text,
+        'https://manga.firstcallmedical.app',
+      );
+      await tester.enterText(urlField, '');
+      await tester.pumpAndSettle();
 
       await _tap(tester, find.text('Next'));
       expect(find.text("You're all set"), findsNothing);
@@ -79,7 +89,7 @@ void main() {
       expect(find.text('Connect your server'), findsOneWidget);
 
       await _tap(tester, find.text('Back'));
-      expect(find.text('Welcome to Tsumiru'), findsOneWidget);
+      expect(find.text('Welcome to Mangaka'), findsOneWidget);
     },
   );
 

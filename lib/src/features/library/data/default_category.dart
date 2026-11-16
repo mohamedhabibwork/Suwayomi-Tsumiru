@@ -15,6 +15,7 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
   final db = ref.watch(offlineReadDatabaseProvider);
   if (offline && db != null) {
     final categories = await db.allOfflineCategories();
+    if (categories.isEmpty) return 0;
     final defaults = categories.where((category) => category.isDefaultCategory);
     return defaults.length == 1 ? defaults.single.id : null;
   }
@@ -26,7 +27,17 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
     (Object error, StackTrace stack) => AccountCapability.unknown,
   );
   if (capability == AccountCapability.unsupported) return 0;
-  if (capability != AccountCapability.supported) return null;
+  if (capability != AccountCapability.supported) {
+    if (db != null) {
+      final categories = await db.allOfflineCategories();
+      if (categories.isEmpty) return 0;
+      final defaults = categories.where(
+        (category) => category.isDefaultCategory,
+      );
+      return defaults.length == 1 ? defaults.single.id : null;
+    }
+    return null;
+  }
   try {
     return await repository.getDefaultCategoryId();
   } catch (_) {

@@ -291,7 +291,8 @@ Future<List<MangaDto>?> categoryMangaList(Ref ref, int categoryId) async {
   if (all == null) return null;
   return all.where((m) {
     final ids = m.categories.nodes.map((c) => c.id).toList();
-    return ids.contains(categoryId) || (categoryId == defaultId && ids.isEmpty);
+    return ids.contains(categoryId) ||
+        (categoryId == (defaultId ?? 0) && ids.isEmpty);
   }).toList();
 }
 

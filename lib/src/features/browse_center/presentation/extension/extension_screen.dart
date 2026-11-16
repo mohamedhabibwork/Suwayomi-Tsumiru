@@ -77,18 +77,26 @@ class ExtensionScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final extensionMapData = ref.watch(extensionMapFilteredAndQueriedProvider);
+    final activeCategory = ref.watch(selectedResourceCategoryProvider);
 
-    final extensionMap = {...?extensionMapData.value};
-    final installed = extensionMap.remove("installed");
-    final update = extensionMap.remove("update");
-    final all = extensionMap.remove("all");
+    List<Extension>? filterCategory(List<Extension>? list) => list
+        ?.where((e) => matchesExtensionCategory(e, activeCategory))
+        .toList();
+
+    final rawMap = {...?extensionMapData.value};
+    final installed = filterCategory(rawMap.remove("installed"));
+    final update = filterCategory(rawMap.remove("update"));
+    final all = filterCategory(rawMap.remove("all"));
+    final extensionMap = <String, List<Extension>>{
+      for (final entry in rawMap.entries)
+        entry.key: filterCategory(entry.value) ?? const <Extension>[],
+    };
 
     refresh() => ref.read(extensionActionsProvider).refreshList();
 
     final updatingAll = useState(false);
 
     useEffect(() {
-      // Effect bodies run during build; invalidating a provider there throws.
       if (extensionMapData.isNotLoading) {
         Future.microtask(() {
           if (context.mounted) refresh();
@@ -106,50 +114,26 @@ class ExtensionScreen extends HookConsumerWidget {
     }, [extensionMapData.value]);
 
     final query = ref.watch(extensionQueryProvider);
-    final activeCategory = ref.watch(selectedResourceCategoryProvider);
-    final videoResources = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.videos,
-      query: query,
-    );
-    final comicResources = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.comics,
-      query: query,
-    );
-    final otherResources = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.other,
-      query: query,
-    );
-    final showMangaSection =
-        activeCategory == ResourceCategory.all ||
-        activeCategory == ResourceCategory.manga;
-    final showVideosSection =
-        activeCategory == ResourceCategory.all ||
-        activeCategory == ResourceCategory.videos;
-    final showComicsSection =
-        activeCategory == ResourceCategory.all ||
-        activeCategory == ResourceCategory.comics;
-    final showOtherSection =
-        activeCategory == ResourceCategory.all ||
-        activeCategory == ResourceCategory.other;
-
     final desktop = context.usesDesktopShell;
     final canManageStores = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_EXTENSION_STORES);
     final storeList = ref.watch(extensionStoreListProvider);
-    final hasKeiyoushiStore =
-        storeList.value?.stores.any((s) => s.indexUrl == kKeiyoushiStoreUrl) ??
-        false;
-    final addingKeiyoushi = useState(false);
+    final existingStoreUrls = {
+      ...?storeList.value?.stores.map((s) => s.indexUrl),
+    };
+    final hasDefaultStores = kCuratedExtensionStores
+        .where((s) => s.isDefault && !s.isNsfw)
+        .every((s) => existingStoreUrls.contains(s.indexUrl));
+    final addingStores = useState(false);
 
-    Future<void> quickAddKeiyoushi() async {
-      if (addingKeiyoushi.value) return;
-      addingKeiyoushi.value = true;
+    Future<void> quickAddDefaultStores() async {
+      if (addingStores.value) return;
+      addingStores.value = true;
       await AppUtils.guard(() async {
-        for (final preset in kCuratedExtensionStores.where((s) => s.isDefault)) {
+        for (final preset in kCuratedExtensionStores.where(
+          (s) => s.isDefault && !s.isNsfw,
+        )) {
           try {
             await ref
                 .read(extensionStoreRepositoryProvider)
@@ -161,82 +145,57 @@ class ExtensionScreen extends HookConsumerWidget {
         ref.refresh(extensionStoreListProvider.future);
         await refresh();
       }, ref.read(toastProvider));
-      if (context.mounted) addingKeiyoushi.value = false;
-    }
-
-    List<Widget> mediaResourceSection({
-      required String keyName,
-      required String title,
-      required List<MediaResourceItem> items,
-    }) {
-      if (items.isEmpty) return const <Widget>[];
-      return [
-        SliverToBoxAdapter(
-          child: ListTile(
-            title: Text(
-              title,
-              style: context.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            trailing: TextButton(
-              onPressed: () => ref
-                  .read(selectedMediaResourcesProvider.notifier)
-                  .selectDefaults(),
-              child: const Text('Reset Defaults'),
-            ),
-          ),
-        ),
-        SliverList(
-          key: ValueKey(keyName),
-          delegate: SliverChildBuilderDelegate(
-            (context, index) => MediaResourceExtensionTile(
-              key: ValueKey(items[index].id),
-              item: items[index],
-            ),
-            childCount: items.length,
-          ),
-        ),
-      ];
+      if (context.mounted) addingStores.value = false;
     }
 
     final body = extensionMapData.showUiWhenData(
       context,
       (data) {
-        final combined = <Extension>[
-          ...?installed,
-          ...?update,
-          ...?all,
-          for (final list in extensionMap.values) ...list,
+        final combinedAll = <Extension>[
+          ...?extensionMapData.value?["installed"],
+          ...?extensionMapData.value?["update"],
+          ...?extensionMapData.value?["all"],
+          for (final entry in (extensionMapData.value ?? {}).entries)
+            if (entry.key != "installed" &&
+                entry.key != "update" &&
+                entry.key != "all")
+              ...entry.value,
         ];
-        final top10 = query.isBlank
-            ? selectTop10Extensions(combined)
+        final topVideos = query.isBlank &&
+                (activeCategory == ResourceCategory.all ||
+                    activeCategory == ResourceCategory.videos)
+            ? selectTopVideoExtensions(combinedAll)
             : const <Extension>[];
-        final hasVisibleManga =
-            showMangaSection &&
-            (installed.isNotBlank ||
-                update.isNotBlank ||
-                all.isNotBlank ||
-                extensionMap.values.any((list) => list.isNotBlank));
-        final hasVisibleMedia =
-            (showVideosSection && videoResources.isNotEmpty) ||
-            (showComicsSection && comicResources.isNotEmpty) ||
-            (showOtherSection && otherResources.isNotEmpty);
-        if (!hasVisibleManga && !hasVisibleMedia) {
+        final top10Manga = query.isBlank &&
+                (activeCategory == ResourceCategory.all ||
+                    activeCategory == ResourceCategory.manga)
+            ? selectTop10Extensions(combinedAll)
+            : const <Extension>[];
+
+        final hasVisible =
+            installed.isNotBlank ||
+            update.isNotBlank ||
+            all.isNotBlank ||
+            topVideos.isNotEmpty ||
+            top10Manga.isNotEmpty ||
+            extensionMap.values.any((list) => list.isNotBlank);
+
+        if (!hasVisible) {
           if (query.isNotBlank) return const BrowseNoSearchResults();
           return Emoticons(
             title: context.l10n.extensionListEmpty,
             button: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (canManageStores && !hasKeiyoushiStore)
+                if (canManageStores && !hasDefaultStores)
                   FilledButton.icon(
-                    onPressed: addingKeiyoushi.value ? null : quickAddKeiyoushi,
+                    onPressed:
+                        addingStores.value ? null : quickAddDefaultStores,
                     icon: const Icon(FluentIcons.star_24_regular),
                     label: Text(
-                      addingKeiyoushi.value
+                      addingStores.value
                           ? context.l10n.processing
-                          : 'Add Default Extension Stores',
+                          : 'Add All Default Stores (Manga, Video, Aidoku & Mangayomi)',
                     ),
                   ),
                 TextButton(
@@ -247,46 +206,27 @@ class ExtensionScreen extends HookConsumerWidget {
             ),
           );
         }
+
         final scrollView = CustomScrollView(
           slivers: [
-            if (showVideosSection)
-              ...mediaResourceSection(
-                keyName: 'videos_resources',
-                title: 'Videos & Anime Extensions',
-                items: videoResources,
-              ),
-            if (showComicsSection)
-              ...mediaResourceSection(
-                keyName: 'comics_resources',
-                title: 'Comics & Graphic Novels Extensions',
-                items: comicResources,
-              ),
-            if (showOtherSection)
-              ...mediaResourceSection(
-                keyName: 'other_resources',
-                title: 'Novels & Else Resources',
-                items: otherResources,
-              ),
-            if (showMangaSection &&
-                query.isBlank &&
-                top10.isEmpty &&
-                canManageStores &&
-                !hasKeiyoushiStore)
+            if (query.isBlank && canManageStores && !hasDefaultStores)
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                   child: Card(
                     child: ListTile(
                       leading: const Icon(FluentIcons.star_24_regular),
-                      title: const Text('Easy Add Default Manga & Comic Stores'),
+                      title: const Text(
+                        'Add All Default Stores (Manga, Videos, Aidoku & Mangayomi)',
+                      ),
                       subtitle: const Text(
-                        'Add Keiyoushi & Yuzono stores for MangaDex, Comick, Weeb Central, MangaFire, Bato.to & more',
+                        'Keiyoushi, Yuzono Anime, MO350AZ No-NSFW, FelipeGFA, Aidoku & Mangayomi',
                       ),
                       trailing: FilledButton(
                         onPressed:
-                            addingKeiyoushi.value ? null : quickAddKeiyoushi,
+                            addingStores.value ? null : quickAddDefaultStores,
                         child: Text(
-                          addingKeiyoushi.value
+                          addingStores.value
                               ? context.l10n.processing
                               : context.l10n.add,
                         ),
@@ -295,31 +235,51 @@ class ExtensionScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-            if (showMangaSection && top10.isNotEmpty)
+            if (topVideos.isNotEmpty)
               ...extensionSet(
-                key: const ValueKey("top10"),
-                title: 'Top 10 Popular Manga Extensions',
-                extensions: top10,
+                key: const ValueKey("top_videos"),
+                title: 'Top Video & Anime Extensions',
+                extensions: topVideos,
                 desktop: desktop,
                 headerTrailing: TextButton(
                   onPressed: () async {
-                    final toInstall = top10
-                        .where((e) => !(e.isInstalled ?? false))
+                    final toInstall = topVideos
+                        .where((e) => !e.isInstalled)
                         .take(4)
                         .map((e) => e.pkgName)
                         .toList();
                     for (final pkg in toInstall) {
                       try {
-                        await ref
-                            .read(extensionActionsProvider)
-                            .install(pkg);
+                        await ref.read(extensionActionsProvider).install(pkg);
+                      } catch (_) {}
+                    }
+                  },
+                  child: const Text('Install Video Defaults'),
+                ),
+              ),
+            if (top10Manga.isNotEmpty)
+              ...extensionSet(
+                key: const ValueKey("top10"),
+                title: 'Top 10 Popular Manga Extensions',
+                extensions: top10Manga,
+                desktop: desktop,
+                headerTrailing: TextButton(
+                  onPressed: () async {
+                    final toInstall = top10Manga
+                        .where((e) => !e.isInstalled)
+                        .take(4)
+                        .map((e) => e.pkgName)
+                        .toList();
+                    for (final pkg in toInstall) {
+                      try {
+                        await ref.read(extensionActionsProvider).install(pkg);
                       } catch (_) {}
                     }
                   },
                   child: const Text('Install Defaults'),
                 ),
               ),
-            if (showMangaSection && update.isNotBlank)
+            if (update.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("update"),
                 title: languageMap["update"]?.displayName ?? "",
@@ -343,29 +303,28 @@ class ExtensionScreen extends HookConsumerWidget {
                   child: Text(context.l10n.updateAll),
                 ),
               ),
-            if (showMangaSection && installed.isNotBlank)
+            if (installed.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("installed"),
                 title: languageMap["installed"]?.displayName ?? "",
                 extensions: installed,
                 desktop: desktop,
               ),
-            if (showMangaSection && all.isNotBlank)
+            if (all.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("all"),
                 title: languageMap["all"]?.displayName ?? "",
                 extensions: all,
                 desktop: desktop,
               ),
-            if (showMangaSection)
-              for (final k in extensionMap.keys)
-                if (extensionMap[k].isNotBlank)
-                  ...extensionSet(
-                    key: ValueKey(k),
-                    title: languageMap[k]?.displayName ?? k,
-                    extensions: extensionMap[k],
-                    desktop: desktop,
-                  ),
+            for (final k in extensionMap.keys)
+              if (extensionMap[k].isNotBlank)
+                ...extensionSet(
+                  key: ValueKey(k),
+                  title: languageMap[k]?.displayName ?? k,
+                  extensions: extensionMap[k],
+                  desktop: desktop,
+                ),
           ],
         );
         return RefreshIndicator(

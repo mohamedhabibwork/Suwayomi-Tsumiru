@@ -23,6 +23,7 @@ import '../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/top_extensions.dart';
@@ -105,13 +106,26 @@ class ExtensionStoreScreen extends ConsumerWidget {
                   ),
                 Expanded(
                   child: storeData.showUiWhenData(context, (data) {
-                    final stores = data?.stores ?? const <ExtensionStore>[];
+                    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+                    final stores = (data?.stores ?? const <ExtensionStore>[])
+                        .where(
+                          (s) =>
+                              showNsfw ||
+                              (!s.name.contains('18+') &&
+                                  !s.indexUrl
+                                      .toLowerCase()
+                                      .contains('adult')),
+                        )
+                        .toList();
                     final existingUrls = {
-                      for (final s in stores) s.indexUrl,
+                      for (final s in data?.stores ?? const <ExtensionStore>[])
+                        s.indexUrl,
                     };
                     final availablePresets = [
                       for (final preset in kCuratedExtensionStores)
-                        if (!existingUrls.contains(preset.indexUrl)) preset,
+                        if (!existingUrls.contains(preset.indexUrl) &&
+                            (showNsfw || !preset.isNsfw))
+                          preset,
                     ];
                     if (stores.isEmpty) {
                       return Emoticons(

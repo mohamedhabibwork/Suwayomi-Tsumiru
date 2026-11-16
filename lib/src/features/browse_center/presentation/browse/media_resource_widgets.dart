@@ -8,12 +8,12 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../../constants/db_keys.dart';
-import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
+import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/top_extensions.dart';
+import '../extension/controller/extension_actions.dart';
+import '../extension/controller/extension_controller.dart';
+import '../source/controller/source_controller.dart';
 
 IconData iconForResourceCategory(ResourceCategory category) =>
     switch (category) {
@@ -51,175 +51,47 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
                   .select(category),
             ),
           ActionChip(
-            avatar: const Icon(FluentIcons.checkmark_circle_24_regular, size: 16),
-            label: const Text('Select Defaults'),
-            onPressed: () {
-              ref.read(selectedMediaResourcesProvider.notifier).selectDefaults();
+            avatar: const Icon(
+              FluentIcons.checkmark_circle_24_regular,
+              size: 16,
+            ),
+            label: const Text('Install Defaults'),
+            onPressed: () async {
+              final toast = ref.read(toastProvider);
+              toast?.show(
+                'Syncing default Manga, Video, Aidoku & Mangayomi stores...',
+              );
+              for (final preset in kCuratedExtensionStores.where(
+                (s) => s.isDefault && !s.isNsfw,
+              )) {
+                try {
+                  await ref
+                      .read(extensionStoreRepositoryProvider)
+                      .addStore(preset.indexUrl);
+                } catch (_) {}
+              }
+              await ref.read(extensionActionsProvider).refreshList();
+              final extList = await ref.read(extensionProvider.future);
+              if (extList != null) {
+                final topManga = selectTop10Extensions(extList)
+                    .where((e) => !e.isInstalled)
+                    .take(2);
+                final topVideo = selectTopVideoExtensions(extList)
+                    .where((e) => !e.isInstalled)
+                    .take(2);
+                for (final ext in [...topManga, ...topVideo]) {
+                  try {
+                    await ref.read(extensionActionsProvider).install(ext.pkgName);
+                  } catch (_) {}
+                }
+              }
+              // ignore: unused_result
+              ref.refresh(sourceListProvider.future);
               onSelectDefaults?.call();
-              ref
-                  .read(toastProvider)
-                  ?.show('Default Video, Manga, Comic & Novel resources selected');
+              toast?.show('Default Manga & Video sources installed');
             },
           ),
         ],
-      ),
-    );
-  }
-}
-
-List<MediaResourceItem> visibleCatalogForCategory(
-  WidgetRef ref,
-  ResourceCategory category, {
-  String? query,
-  bool onlySelected = false,
-}) {
-  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
-  final selectedIds = (ref.watch(selectedMediaResourcesProvider) ??
-          (DBKeys.selectedMediaResources.initial as List<String>))
-      .toSet();
-  final search = query?.trim().toLowerCase() ?? '';
-
-  return [
-    for (final item in kMediaResourceCatalog)
-      if ((category == ResourceCategory.all || item.category == category) &&
-          (showNsfw || !item.isNsfw) &&
-          (!onlySelected || selectedIds.contains(item.id)) &&
-          (search.isEmpty ||
-              item.name.toLowerCase().contains(search) ||
-              item.subtitle.toLowerCase().contains(search)))
-        item,
-  ];
-}
-
-class MediaResourceExtensionTile extends ConsumerWidget {
-  const MediaResourceExtensionTile({
-    super.key,
-    required this.item,
-  });
-
-  final MediaResourceItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedIds = ref.watch(selectedMediaResourcesProvider) ??
-        (DBKeys.selectedMediaResources.initial as List<String>);
-    final isSelected = selectedIds.contains(item.id);
-    final scheme = context.theme.colorScheme;
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: isSelected
-            ? scheme.primaryContainer
-            : scheme.surfaceContainerHighest,
-        foregroundColor: isSelected
-            ? scheme.onPrimaryContainer
-            : scheme.onSurfaceVariant,
-        child: Icon(iconForResourceCategory(item.category)),
-      ),
-      title: Row(
-        children: [
-          Flexible(
-            child: Text(
-              item.name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          if (item.isNsfw) ...[
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: scheme.errorContainer,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                '18+',
-                style: context.textTheme.labelSmall?.copyWith(
-                  color: scheme.onErrorContainer,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-      subtitle: Text(
-        '${item.lang} • ${item.subtitle}',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            tooltip: 'Open resource',
-            icon: const Icon(FluentIcons.open_24_regular),
-            onPressed: () => launchUrlInAppBrowser(
-              context,
-              item.url,
-              ref.read(toastProvider),
-            ),
-          ),
-          FilledButton.tonal(
-            onPressed: () =>
-                ref.read(selectedMediaResourcesProvider.notifier).toggle(item.id),
-            child: Text(isSelected ? 'Selected' : 'Select'),
-          ),
-        ],
-      ),
-      onTap: () =>
-          ref.read(selectedMediaResourcesProvider.notifier).toggle(item.id),
-    );
-  }
-}
-
-class MediaResourceSourceTile extends ConsumerWidget {
-  const MediaResourceSourceTile({
-    super.key,
-    required this.item,
-  });
-
-  final MediaResourceItem item;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = context.theme.colorScheme;
-    final isVideo = item.category == ResourceCategory.videos;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: scheme.primaryContainer,
-        foregroundColor: scheme.onPrimaryContainer,
-        child: Icon(iconForResourceCategory(item.category)),
-      ),
-      title: Text(
-        item.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text(
-        item.subtitle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: FilledButton.tonalIcon(
-        onPressed: () => launchUrlInAppBrowser(
-          context,
-          item.url,
-          ref.read(toastProvider),
-        ),
-        icon: Icon(
-          isVideo
-              ? FluentIcons.play_24_regular
-              : FluentIcons.open_24_regular,
-          size: 18,
-        ),
-        label: Text(isVideo ? 'Watch' : 'Open'),
-      ),
-      onTap: () => launchUrlInAppBrowser(
-        context,
-        item.url,
-        ref.read(toastProvider),
       ),
     );
   }

@@ -15,6 +15,7 @@ import '../../../../widgets/emoticons.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../domain/extension/top_extensions.dart';
+import '../../domain/source/source_model.dart';
 import '../browse/browse_no_search_results.dart';
 import '../browse/browse_section_grid.dart';
 import '../browse/media_resource_widgets.dart';
@@ -30,53 +31,29 @@ class SourceScreen extends HookConsumerWidget {
     final sourceMapData = ref.watch(sourceMapFilteredAndQueriedProvider);
     final query = ref.watch(sourceSearchQueryProvider);
     final activeCategory = ref.watch(selectedResourceCategoryProvider);
-    final selectedVideos = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.videos,
-      query: query,
-      onlySelected: true,
-    );
-    final selectedComics = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.comics,
-      query: query,
-      onlySelected: true,
-    );
-    final selectedOther = visibleCatalogForCategory(
-      ref,
-      ResourceCategory.other,
-      query: query,
-      onlySelected: true,
-    );
-    final showManga =
-        activeCategory == ResourceCategory.all ||
-        activeCategory == ResourceCategory.manga;
-    final showVideos =
-        (activeCategory == ResourceCategory.all ||
-            activeCategory == ResourceCategory.videos) &&
-        selectedVideos.isNotEmpty;
-    final showComics =
-        (activeCategory == ResourceCategory.all ||
-            activeCategory == ResourceCategory.comics) &&
-        selectedComics.isNotEmpty;
-    final showOther =
-        (activeCategory == ResourceCategory.all ||
-            activeCategory == ResourceCategory.other) &&
-        selectedOther.isNotEmpty;
+
+    List<SourceDto>? filterCategory(List<SourceDto>? list) => list
+        ?.where((s) => matchesSourceCategory(s, activeCategory))
+        .toList();
 
     final allPinned = ref.watch(pinnedSourcesProvider);
-    final pinned = query.isBlank
-        ? allPinned
-        : allPinned.where((s) => s.name.query(query)).toList();
+    final pinned = (query.isBlank
+            ? allPinned
+            : allPinned.where((s) => s.name.query(query)).toList())
+        .where((s) => matchesSourceCategory(s, activeCategory))
+        .toList();
 
-    final sourceMap = {...?sourceMapData.value};
-    final localSource = sourceMap.remove("localsourcelang");
-    final lastUsed = sourceMap.remove("lastUsed");
-    final allSource = sourceMap.remove("all");
+    final rawMap = {...?sourceMapData.value};
+    final localSource = filterCategory(rawMap.remove("localsourcelang"));
+    final lastUsed = filterCategory(rawMap.remove("lastUsed"));
+    final allSource = filterCategory(rawMap.remove("all"));
+    final sourceMap = <String, List<SourceDto>>{
+      for (final entry in rawMap.entries)
+        entry.key: filterCategory(entry.value) ?? const <SourceDto>[],
+    };
 
     refresh() => ref.refresh(sourceListProvider.future);
     useEffect(() {
-      // Effect bodies run during build; invalidating a provider there throws.
       if (sourceMapData.isNotLoading) {
         Future.microtask(() {
           if (context.mounted) refresh();
@@ -94,32 +71,19 @@ class SourceScreen extends HookConsumerWidget {
     }, [sourceMapData.value]);
 
     final body = sourceMapData.showUiWhenData(context, (data) {
-      final hasVisibleManga =
-          showManga &&
-          (pinned.isNotEmpty ||
-              localSource.isNotBlank ||
-              lastUsed.isNotBlank ||
-              allSource.isNotBlank ||
-              sourceMap.values.any((list) => list.isNotBlank));
-      final hasVisibleMedia = showVideos || showComics || showOther;
-      if (!hasVisibleManga && !hasVisibleMedia) {
+      final hasVisible =
+          pinned.isNotEmpty ||
+          localSource.isNotBlank ||
+          lastUsed.isNotBlank ||
+          allSource.isNotBlank ||
+          sourceMap.values.any((list) => list.isNotBlank);
+      if (!hasVisible) {
         if (query.isNotBlank) return const BrowseNoSearchResults();
         return Emoticons(
           title: context.l10n.noSourcesFound,
-          button: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FilledButton(
-                onPressed: () => ref
-                    .read(selectedMediaResourcesProvider.notifier)
-                    .selectDefaults(),
-                child: const Text('Select Default Resources'),
-              ),
-              TextButton(
-                onPressed: refresh,
-                child: Text(context.l10n.refresh),
-              ),
-            ],
+          button: TextButton(
+            onPressed: refresh,
+            child: Text(context.l10n.refresh),
           ),
         );
       }
@@ -130,55 +94,7 @@ class SourceScreen extends HookConsumerWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: CustomScrollView(
               slivers: [
-                if (showVideos) ...[
-                  const SliverToBoxAdapter(
-                    child: BrowseSectionHeading(
-                      title: 'Videos & Anime Resources',
-                      topPadding: 16,
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => MediaResourceSourceTile(
-                        item: selectedVideos[index],
-                      ),
-                      childCount: selectedVideos.length,
-                    ),
-                  ),
-                ],
-                if (showComics) ...[
-                  const SliverToBoxAdapter(
-                    child: BrowseSectionHeading(
-                      title: 'Comics & Graphic Novels',
-                      topPadding: 16,
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => MediaResourceSourceTile(
-                        item: selectedComics[index],
-                      ),
-                      childCount: selectedComics.length,
-                    ),
-                  ),
-                ],
-                if (showOther) ...[
-                  const SliverToBoxAdapter(
-                    child: BrowseSectionHeading(
-                      title: 'Novels & Else Resources',
-                      topPadding: 16,
-                    ),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => MediaResourceSourceTile(
-                        item: selectedOther[index],
-                      ),
-                      childCount: selectedOther.length,
-                    ),
-                  ),
-                ],
-                if (showManga && pinned.isNotEmpty) ...[
+                if (pinned.isNotEmpty) ...[
                   SliverToBoxAdapter(
                     child: BrowseSectionHeading(
                       title: languageMap["pinned"]?.displayName ?? "",
@@ -191,7 +107,7 @@ class SourceScreen extends HookConsumerWidget {
                         SourceCard(source: pinned[index]),
                   ),
                 ],
-                if (showManga && lastUsed.isNotBlank) ...[
+                if (lastUsed.isNotBlank) ...[
                   SliverToBoxAdapter(
                     child: BrowseSectionHeading(
                       title: languageMap["lastUsed"]?.displayName ?? "",
@@ -204,7 +120,7 @@ class SourceScreen extends HookConsumerWidget {
                         SourceCard(source: lastUsed[index]),
                   ),
                 ],
-                if (showManga && allSource.isNotBlank) ...[
+                if (allSource.isNotBlank) ...[
                   SliverToBoxAdapter(
                     child: BrowseSectionHeading(
                       title: languageMap["all"]?.displayName ?? "",
@@ -217,23 +133,22 @@ class SourceScreen extends HookConsumerWidget {
                         SourceCard(source: allSource[index]),
                   ),
                 ],
-                if (showManga)
-                  for (final k in sourceMap.keys) ...[
-                    if (sourceMap[k].isNotBlank) ...[
-                      SliverToBoxAdapter(
-                        child: BrowseSectionHeading(
-                          title: languageMap[k]?.displayName ?? k,
-                          topPadding: 24,
-                        ),
+                for (final k in sourceMap.keys) ...[
+                  if (sourceMap[k].isNotBlank) ...[
+                    SliverToBoxAdapter(
+                      child: BrowseSectionHeading(
+                        title: languageMap[k]?.displayName ?? k,
+                        topPadding: 24,
                       ),
-                      BrowseCardGrid.source(
-                        itemCount: sourceMap[k]!.length,
-                        itemBuilder: (context, index) =>
-                            SourceCard(source: sourceMap[k]![index]),
-                      ),
-                    ],
+                    ),
+                    BrowseCardGrid.source(
+                      itemCount: sourceMap[k]!.length,
+                      itemBuilder: (context, index) =>
+                          SourceCard(source: sourceMap[k]![index]),
+                    ),
                   ],
-                if (showManga && localSource.isNotBlank) ...[
+                ],
+                if (localSource.isNotBlank) ...[
                   SliverToBoxAdapter(
                     child: BrowseSectionHeading(
                       title: languageMap["localsourcelang"]?.displayName ?? "",
@@ -255,43 +170,7 @@ class SourceScreen extends HookConsumerWidget {
         onRefresh: refresh,
         child: CustomScrollView(
           slivers: [
-            if (showVideos) ...[
-              const SliverToBoxAdapter(
-                child: ListTile(title: Text('Videos & Anime Resources')),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) =>
-                      MediaResourceSourceTile(item: selectedVideos[index]),
-                  childCount: selectedVideos.length,
-                ),
-              ),
-            ],
-            if (showComics) ...[
-              const SliverToBoxAdapter(
-                child: ListTile(title: Text('Comics & Graphic Novels')),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) =>
-                      MediaResourceSourceTile(item: selectedComics[index]),
-                  childCount: selectedComics.length,
-                ),
-              ),
-            ],
-            if (showOther) ...[
-              const SliverToBoxAdapter(
-                child: ListTile(title: Text('Novels & Else Resources')),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) =>
-                      MediaResourceSourceTile(item: selectedOther[index]),
-                  childCount: selectedOther.length,
-                ),
-              ),
-            ],
-            if (showManga && pinned.isNotEmpty) ...[
+            if (pinned.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: ListTile(
                   title: Text(languageMap["pinned"]?.displayName ?? ""),
@@ -304,7 +183,7 @@ class SourceScreen extends HookConsumerWidget {
                 ),
               ),
             ],
-            if (showManga && lastUsed.isNotBlank) ...[
+            if (lastUsed.isNotBlank) ...[
               SliverToBoxAdapter(
                 child: ListTile(
                   title: Text(languageMap["lastUsed"]?.displayName ?? ""),
@@ -314,7 +193,7 @@ class SourceScreen extends HookConsumerWidget {
                 child: SourceListTile(source: lastUsed!.first),
               ),
             ],
-            if (showManga && allSource.isNotBlank) ...[
+            if (allSource.isNotBlank) ...[
               SliverToBoxAdapter(
                 child: ListTile(
                   title: Text(languageMap["all"]?.displayName ?? ""),
@@ -327,24 +206,23 @@ class SourceScreen extends HookConsumerWidget {
                 ),
               ),
             ],
-            if (showManga)
-              for (final k in sourceMap.keys) ...[
-                if (sourceMap[k].isNotBlank) ...[
-                  SliverToBoxAdapter(
-                    child: ListTile(
-                      title: Text(languageMap[k]?.displayName ?? k),
-                    ),
+            for (final k in sourceMap.keys) ...[
+              if (sourceMap[k].isNotBlank) ...[
+                SliverToBoxAdapter(
+                  child: ListTile(
+                    title: Text(languageMap[k]?.displayName ?? k),
                   ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) =>
-                          SourceListTile(source: sourceMap[k]![index]),
-                      childCount: sourceMap[k]?.length,
-                    ),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        SourceListTile(source: sourceMap[k]![index]),
+                    childCount: sourceMap[k]?.length,
                   ),
-                ],
+                ),
               ],
-            if (showManga && localSource.isNotBlank) ...[
+            ],
+            if (localSource.isNotBlank) ...[
               SliverToBoxAdapter(
                 child: ListTile(
                   title: Text(

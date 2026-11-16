@@ -8,27 +8,52 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../source/source_model.dart';
 import 'extension_model.dart';
 
 /// Official Keiyoushi extension repository index URL (Protobuf).
 const kKeiyoushiStoreUrl =
     'https://github.com/keiyoushi/extensions/raw/repo/index.pb';
 
-/// Yuzono multi-source Manga & Comics extension store.
-const kYuzonoMangaStoreUrl =
-    'https://raw.githubusercontent.com/yuzono/manga-repo/repo/index.min.json';
+/// Official Keiyoushi raw GitHub mirror index URL (Protobuf).
+const kKeiyoushiRawStoreUrl =
+    'https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb';
 
-/// Kohi-den Anime & Video extension store.
-const kKohidenVideoStoreUrl =
-    'https://raw.githubusercontent.com/kohiden/extensions/main/index.min.json';
+/// Yuzono Anime & Video Protobuf extension store.
+const kYuzonoAnimePbStoreUrl =
+    'https://x.ujol.workers.dev/yuzono/anime/index.pb';
 
-/// Yuzono Anime & Video extension store.
-const kYuzonoVideoStoreUrl =
-    'https://raw.githubusercontent.com/yuzono/anime-repo/repo/index.min.json';
+/// Extensions No NSFW store (redirects via index_v2 to index.pb).
+const kNoNsfwRepoUrl =
+    'https://raw.githubusercontent.com/MO350AZ/extensions-no-nsfw/repo/repo.json';
 
-/// Suwayomi community extension store.
-const kSuwayomiStoreUrl =
-    'https://raw.githubusercontent.com/Suwayomi/tachiyomi-extension/repo/index.min.json';
+/// FelipeGFA Protobuf extension store.
+const kFelipeGfaStoreUrl =
+    'https://raw.githubusercontent.com/FelipeGFA/extensoes/refs/heads/repo/index.pb';
+
+/// MangaDock legacy Tachiyomi JSON extension store.
+const kMangaDockStoreUrl =
+    'https://raw.githubusercontent.com/dddinmx/MangaDock-extensions/main/index.min.json';
+
+/// Aidoku Community Sources JSON store.
+const kAidokuCommunityStoreUrl =
+    'https://aidoku-community.github.io/sources/index.min.json';
+
+/// MangaDock Aidoku Sources JSON store.
+const kMangaDockAidokuStoreUrl =
+    'https://raw.githubusercontent.com/dddinmx/MangaDock-extensions/main/aidoku/index.min.json';
+
+/// Mangayomi Manga Extensions JSON store.
+const kMangayomiMangaStoreUrl =
+    'https://raw.githubusercontent.com/m2k3a/mangayomi-extensions/refs/heads/main/index.json';
+
+/// Mangayomi Anime & Video Extensions JSON store.
+const kMangayomiAnimeStoreUrl =
+    'https://raw.githubusercontent.com/m2k3a/mangayomi-extensions/refs/heads/main/anime_index.json';
+
+/// Livid96 Aniyomi Adult Extensions store (18+ / NSFW).
+const kLividAdultVideoStoreUrl =
+    'https://raw.githubusercontent.com/Livid96/Aniyomi-Adult-Extensions/main/index.min.json';
 
 class CuratedStoreSpec {
   const CuratedStoreSpec({
@@ -37,6 +62,7 @@ class CuratedStoreSpec {
     required this.indexUrl,
     required this.category,
     this.isDefault = false,
+    this.isNsfw = false,
   });
 
   final String name;
@@ -44,6 +70,7 @@ class CuratedStoreSpec {
   final String indexUrl;
   final ResourceCategory category;
   final bool isDefault;
+  final bool isNsfw;
 }
 
 const List<CuratedStoreSpec> kCuratedExtensionStores = [
@@ -55,255 +82,165 @@ const List<CuratedStoreSpec> kCuratedExtensionStores = [
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Yuzono Multi-Resource Store (Default)',
-    subtitle: 'Manga, Western Comics & Global reading sources',
-    indexUrl: kYuzonoMangaStoreUrl,
-    category: ResourceCategory.comics,
+    name: 'Yuzono Anime & Video Store (Default)',
+    subtitle: 'Anime, Donghua & Video streaming extension sources',
+    indexUrl: kYuzonoAnimePbStoreUrl,
+    category: ResourceCategory.videos,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Kohi-den Video & Anime Store',
-    subtitle: 'Anime & Video streaming extension repository',
-    indexUrl: kKohidenVideoStoreUrl,
-    category: ResourceCategory.videos,
+    name: 'Extensions No NSFW Store (Default)',
+    subtitle: 'Safe-only Manga & Comic extensions (MO350AZ)',
+    indexUrl: kNoNsfwRepoUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Yuzono Anime & Video Store',
-    subtitle: 'Multi-language Anime, Donghua & Video sources',
-    indexUrl: kYuzonoVideoStoreUrl,
-    category: ResourceCategory.videos,
+    name: 'FelipeGFA Extensions Store (Default)',
+    subtitle: 'Global & Portuguese Manga/Comic extensions',
+    indexUrl: kFelipeGfaStoreUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Suwayomi Community Store',
-    subtitle: 'Community-maintained Tachiyomi & Suwayomi sources',
-    indexUrl: kSuwayomiStoreUrl,
+    name: 'Aidoku Community Sources (Default)',
+    subtitle: 'Aidoku multi-language Manga & Comic sources',
+    indexUrl: kAidokuCommunityStoreUrl,
     category: ResourceCategory.other,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mangayomi Extensions Store (Default)',
+    subtitle: 'Mangayomi multi-source Manga & Comic extensions',
+    indexUrl: kMangayomiMangaStoreUrl,
+    category: ResourceCategory.other,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mangayomi Anime & Video Store (Default)',
+    subtitle: 'Mangayomi Anime & Video streaming sources',
+    indexUrl: kMangayomiAnimeStoreUrl,
+    category: ResourceCategory.videos,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'MangaDock Extensions Store (Default)',
+    subtitle: 'MangaDock Tachiyomi extensions',
+    indexUrl: kMangaDockStoreUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'MangaDock Aidoku Sources (Default)',
+    subtitle: 'MangaDock Aidoku source index',
+    indexUrl: kMangaDockAidokuStoreUrl,
+    category: ResourceCategory.other,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Keiyoushi Raw Mirror Store',
+    subtitle: 'Raw GitHub mirror for Keiyoushi extensions',
+    indexUrl: kKeiyoushiRawStoreUrl,
+    category: ResourceCategory.manga,
+  ),
+  CuratedStoreSpec(
+    name: 'Aniyomi Adult Video Extensions (18+)',
+    subtitle: '18+ Adult video extension sources (Livid96)',
+    indexUrl: kLividAdultVideoStoreUrl,
+    category: ResourceCategory.videos,
+    isNsfw: true,
   ),
 ];
 
 enum ResourceCategory {
-  all('All Resources'),
+  all('All Sources'),
   manga('Manga & Webtoons'),
   videos('Videos & Anime'),
-  comics('Comics & Graphic Novels'),
-  other('Novels & Else');
+  comics('Comics'),
+  other('Aidoku & Mangayomi');
 
   const ResourceCategory(this.label);
   final String label;
 }
 
-class MediaResourceItem {
-  const MediaResourceItem({
-    required this.id,
-    required this.name,
-    required this.subtitle,
-    required this.url,
-    required this.category,
-    this.lang = 'EN / Multi',
-    this.isDefault = false,
-    this.isNsfw = false,
-  });
-
-  final String id;
-  final String name;
-  final String subtitle;
-  final String url;
-  final ResourceCategory category;
-  final String lang;
-  final bool isDefault;
-  final bool isNsfw;
+bool isVideoExtension(Extension e) {
+  final pkg = e.pkgName.toLowerCase();
+  final name = e.name.toLowerCase();
+  return pkg.contains('.animeextension.') ||
+      name.contains('(video)') ||
+      name.contains('aniyomi:');
 }
 
-const List<MediaResourceItem> kMediaResourceCatalog = [
-  // Videos & Anime
-  MediaResourceItem(
-    id: 'video_hianime',
-    name: 'HiAnime (Video & Anime)',
-    subtitle: 'HD Sub & Dub anime episodes, movies & simulcasts',
-    url: 'https://hianime.to',
-    category: ResourceCategory.videos,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'video_miruro',
-    name: 'Miruro TV (Multi-Server Video)',
-    subtitle: 'Multi-source anime & video streaming with AniList sync',
-    url: 'https://www.miruro.tv',
-    category: ResourceCategory.videos,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'video_animepahe',
-    name: 'AnimePahe (Fast Video)',
-    subtitle: 'Lightweight, fast-loading anime video episodes',
-    url: 'https://animepahe.ru',
-    category: ResourceCategory.videos,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'video_crunchyroll',
-    name: 'Crunchyroll (Official Video)',
-    subtitle: 'Official simulcast anime, movies & video library',
-    url: 'https://www.crunchyroll.com',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_bilibili',
-    name: 'Bilibili TV (Anime & Creator Videos)',
-    subtitle: 'Official Donghua, anime series & community videos',
-    url: 'https://www.bilibili.tv/en/anime',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_aniwave',
-    name: 'AniWave / 9Anime (Video)',
-    subtitle: 'Full anime catalog with sub, dub & special episodes',
-    url: 'https://aniwave.se',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_gogoanime',
-    name: 'GoGoAnime (Classic & Ongoing Video)',
-    subtitle: 'Large archive of classic and ongoing anime videos',
-    url: 'https://anitaku.pe',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_kickassanime',
-    name: 'KickAssAnime (High-Bitrate Video)',
-    subtitle: '1080p/4K anime video streaming & seasonal releases',
-    url: 'https://kickassanime.mx',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_museasia',
-    name: 'Muse Asia & Official Anime Video',
-    subtitle: 'Free licensed full-episode anime playlists',
-    url: 'https://www.youtube.com/@MuseAsia/playlists',
-    category: ResourceCategory.videos,
-  ),
-  MediaResourceItem(
-    id: 'video_hanime_nsfw',
-    name: 'Hanime.tv (18+ Adult Video)',
-    subtitle: '18+ NSFW anime video streaming (Requires Face ID unlock)',
-    url: 'https://hanime.tv',
-    category: ResourceCategory.videos,
-    isNsfw: true,
-  ),
+bool isAidokuOrMangayomiExtension(Extension e) {
+  final pkg = e.pkgName.toLowerCase();
+  return (pkg.startsWith('aidoku.') || pkg.startsWith('mangayomi.')) &&
+      !isVideoExtension(e);
+}
 
-  // Comics & Graphic Novels
-  MediaResourceItem(
-    id: 'comic_webtoon',
-    name: 'LINE Webtoon (Originals & Canvas)',
-    subtitle: 'Official vertical-scroll webtoons, romance, action & fantasy',
-    url: 'https://www.webtoons.com/en/',
-    category: ResourceCategory.comics,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'comic_readcomics',
-    name: 'ReadComicsOnline (Western Comics)',
-    subtitle: 'Marvel, DC, Image, Dark Horse & indie comic issues',
-    url: 'https://readcomiconline.li',
-    category: ResourceCategory.comics,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'comic_tapas',
-    name: 'Tapas (Webcomics & Novels)',
-    subtitle: 'Bite-sized webcomics, manhwa & indie graphic stories',
-    url: 'https://tapas.io',
-    category: ResourceCategory.comics,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'comic_batcave',
-    name: 'Batcave Comics',
-    subtitle: 'Western comic books, graphic novels & omnibus collections',
-    url: 'https://batcave.biz',
-    category: ResourceCategory.comics,
-  ),
-  MediaResourceItem(
-    id: 'comic_comicextra',
-    name: 'ComicExtra Archive',
-    subtitle: 'Full-issue western comics & graphic novel series',
-    url: 'https://comicextra.org',
-    category: ResourceCategory.comics,
-  ),
+bool isComicExtension(Extension e) {
+  final name = e.name.toLowerCase();
+  final pkg = e.pkgName.toLowerCase();
+  return !isVideoExtension(e) &&
+      (name.contains('comic') ||
+          name.contains('webtoon') ||
+          name.contains('tapas') ||
+          pkg.contains('comic') ||
+          pkg.contains('webtoon'));
+}
 
-  // Novels & Else Resources
-  MediaResourceItem(
-    id: 'other_royalroad',
-    name: 'RoyalRoad (Web Novels & LitRPG)',
-    subtitle: 'Top progression fantasy, sci-fi & original web novels',
-    url: 'https://www.royalroad.com/fictions/best-rated',
-    category: ResourceCategory.other,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'other_novelupdates',
-    name: 'NovelUpdates (Light Novels)',
-    subtitle: 'Directory of translated Japanese, Korean & Chinese novels',
-    url: 'https://www.novelupdates.com',
-    category: ResourceCategory.other,
-    isDefault: true,
-  ),
-  MediaResourceItem(
-    id: 'other_scribblehub',
-    name: 'ScribbleHub (Web Fiction)',
-    subtitle: 'Original serialized web novels & light fiction',
-    url: 'https://www.scribblehub.com',
-    category: ResourceCategory.other,
-  ),
-  MediaResourceItem(
-    id: 'other_archive_books',
-    name: 'Internet Archive (Manga, Books & Video)',
-    subtitle: 'Public domain books, retro comics, artbooks & media archive',
-    url: 'https://archive.org/details/manga_library',
-    category: ResourceCategory.other,
-  ),
-  MediaResourceItem(
-    id: 'other_bookwalker',
-    name: 'BookWalker Global (Light Novels & Manga)',
-    subtitle: 'Official English light novels, simulpubs & free previews',
-    url: 'https://global.bookwalker.jp',
-    category: ResourceCategory.other,
-  ),
-];
+bool matchesExtensionCategory(Extension e, ResourceCategory category) =>
+    switch (category) {
+      ResourceCategory.all => true,
+      ResourceCategory.videos => isVideoExtension(e),
+      ResourceCategory.comics => isComicExtension(e),
+      ResourceCategory.other => isAidokuOrMangayomiExtension(e),
+      ResourceCategory.manga =>
+        !isVideoExtension(e) && !isAidokuOrMangayomiExtension(e),
+    };
+
+bool isVideoSource(SourceDto s) {
+  final name = s.name.toLowerCase();
+  final display = s.displayName.toLowerCase();
+  final pkg = s.$extension.pkgName.toLowerCase();
+  return pkg.contains('.animeextension.') ||
+      name.contains('(video)') ||
+      display.contains('(video)');
+}
+
+bool isAidokuOrMangayomiSource(SourceDto s) {
+  final pkg = s.$extension.pkgName.toLowerCase();
+  return (pkg.startsWith('aidoku.') || pkg.startsWith('mangayomi.')) &&
+      !isVideoSource(s);
+}
+
+bool isComicSource(SourceDto s) {
+  final name = s.name.toLowerCase();
+  final pkg = s.$extension.pkgName.toLowerCase();
+  return !isVideoSource(s) &&
+      (name.contains('comic') ||
+          name.contains('webtoon') ||
+          name.contains('tapas') ||
+          pkg.contains('comic') ||
+          pkg.contains('webtoon'));
+}
+
+bool matchesSourceCategory(SourceDto s, ResourceCategory category) =>
+    switch (category) {
+      ResourceCategory.all => true,
+      ResourceCategory.videos => isVideoSource(s),
+      ResourceCategory.comics => isComicSource(s),
+      ResourceCategory.other => isAidokuOrMangayomiSource(s),
+      ResourceCategory.manga =>
+        !isVideoSource(s) && !isAidokuOrMangayomiSource(s),
+    };
 
 class SelectedMediaResources extends Notifier<List<String>?>
     with SharedPreferenceClientMixin<List<String>> {
   @override
   List<String>? build() => initialize(DBKeys.selectedMediaResources);
 
-  bool isSelected(String id) =>
-      (state ?? (DBKeys.selectedMediaResources.initial as List<String>))
-          .contains(id);
-
-  void toggle(String id) {
-    final current = [
-      ...(state ?? (DBKeys.selectedMediaResources.initial as List<String>)),
-    ];
-    if (current.contains(id)) {
-      current.remove(id);
-    } else {
-      current.add(id);
-    }
-    update(current);
-  }
-
   void selectDefaults() {
-    update([
-      for (final item in kMediaResourceCatalog)
-        if (item.isDefault && !item.isNsfw) item.id,
-    ]);
-  }
-
-  void selectAll({required bool includeNsfw}) {
-    update([
-      for (final item in kMediaResourceCatalog)
-        if (includeNsfw || !item.isNsfw) item.id,
-    ]);
+    update(const <String>[]);
   }
 }
 
@@ -338,23 +275,67 @@ const List<({String label, List<String> matchTerms})> kTop10ExtensionSpecs = [
   (label: 'ReadComicsOnline', matchTerms: ['readcomicsonline', 'batcave']),
 ];
 
+/// Curated Top Video & Anime extensions from Yuzono / Mangayomi stores.
+const List<({String label, List<String> matchTerms})> kTopVideoExtensionSpecs = [
+  (label: 'HiAnime', matchTerms: ['hianime', 'zoro']),
+  (label: 'Gogoanime', matchTerms: ['gogoanime']),
+  (label: 'AnimePahe', matchTerms: ['animepahe']),
+  (label: 'AniWave', matchTerms: ['aniwave', '9anime']),
+  (label: 'Crunchyroll', matchTerms: ['crunchyroll']),
+  (label: 'Bilibili', matchTerms: ['bilibili']),
+  (label: 'KickAssAnime', matchTerms: ['kickassanime']),
+  (label: 'Miruro', matchTerms: ['miruro', 'allanime']),
+  (label: 'AnimeKai', matchTerms: ['animekai', 'kaido']),
+  (label: 'Dailymotion', matchTerms: ['dailymotion', ' Donghua']),
+];
+
 /// Selects up to one matching extension per curated Top 10 entry,
 /// preferring English (`en`) or multi-language (`all`) extensions.
 List<Extension> selectTop10Extensions(Iterable<Extension> extensions) {
   final pool = extensions
+      .where((e) => !isVideoExtension(e) && (e.lang == 'en' || e.lang == 'all'))
+      .toList();
+  return _pickMatchingExtensions(pool, kTop10ExtensionSpecs);
+}
+
+/// Selects top Video & Anime extensions that install as real sources.
+List<Extension> selectTopVideoExtensions(Iterable<Extension> extensions) {
+  final videoPool = extensions.where(isVideoExtension).toList();
+  if (videoPool.isEmpty) return const <Extension>[];
+  final preferred = videoPool
       .where((e) => e.lang == 'en' || e.lang == 'all')
       .toList();
+  final picked = _pickMatchingExtensions(
+    preferred.isNotEmpty ? preferred : videoPool,
+    kTopVideoExtensionSpecs,
+  );
+  if (picked.length >= 6) return picked;
+  final seen = {for (final e in picked) e.pkgName};
+  for (final ext in (preferred.isNotEmpty ? preferred : videoPool)) {
+    if (seen.add(ext.pkgName)) {
+      picked.add(ext);
+      if (picked.length >= 10) break;
+    }
+  }
+  return picked;
+}
+
+List<Extension> _pickMatchingExtensions(
+  List<Extension> pool,
+  List<({String label, List<String> matchTerms})> specs,
+) {
   final picked = <Extension>[];
   final seenPkg = <String>{};
 
-  for (final spec in kTop10ExtensionSpecs) {
+  for (final spec in specs) {
     Extension? match;
     for (final term in spec.matchTerms) {
+      final needle = term.toLowerCase();
       for (final ext in pool) {
         if (seenPkg.contains(ext.pkgName)) continue;
         final name = ext.name.toLowerCase();
         final pkg = ext.pkgName.toLowerCase();
-        if (name.contains(term) || pkg.contains(term)) {
+        if (name.contains(needle) || pkg.contains(needle)) {
           match = ext;
           break;
         }

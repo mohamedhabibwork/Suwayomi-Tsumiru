@@ -13,6 +13,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../account/data/account_providers.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/extension_store_repository/extension_store_repository.dart';
 import '../../../domain/extension/top_extensions.dart';
 
@@ -88,7 +89,9 @@ class AddStoreDialog extends HookConsumerWidget {
             runSpacing: 8,
             children: [
               for (final preset in kCuratedExtensionStores)
-                if (!existingUrls.contains(preset.indexUrl))
+                if (!existingUrls.contains(preset.indexUrl) &&
+                    (ref.watch(showNSFWProvider).ifNull(false) ||
+                        !preset.isNsfw))
                   ActionChip(
                     label: Text(preset.name),
                     onPressed: submitting.value

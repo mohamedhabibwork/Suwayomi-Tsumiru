@@ -15,6 +15,7 @@ import '../../../../constants/enum.dart';
 import '../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../features/auth/data/auth_credentials_store.dart';
 import '../../../../features/auth/data/auth_state.dart';
+import '../../../../features/auth/presentation/face_id_auth_service.dart';
 import '../../../../features/auth/presentation/sign_in_action.dart';
 import '../../../../global_providers/global_providers.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
@@ -416,6 +417,42 @@ class InlineAuthSection extends HookConsumerWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+            pad(
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: (busy.value || testing.value)
+                      ? null
+                      : () async {
+                          busy.value = true;
+                          message.value = null;
+                          try {
+                            final signedInUser =
+                                await signInOrRegisterWithFaceId(
+                                  ref,
+                                  serverBaseUrl: resolvedBaseUrl(),
+                                );
+                            if (!context.mounted) return;
+                            isError.value = false;
+                            message.value = null;
+                            ref
+                                .read(toastProvider)
+                                ?.show(
+                                  'Signed in with Face ID as $signedInUser',
+                                );
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            isError.value = true;
+                            message.value = e.toString();
+                          } finally {
+                            if (context.mounted) busy.value = false;
+                          }
+                        },
+                  icon: const Icon(FluentIcons.person_passkey_24_regular),
+                  label: const Text('Sign in with Face ID'),
+                ),
               ),
             ),
           ],

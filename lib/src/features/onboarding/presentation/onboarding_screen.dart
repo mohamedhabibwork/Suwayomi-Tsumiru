@@ -33,6 +33,7 @@ import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
 import '../../auth/data/ui_login_token_rejected.dart';
+import '../../auth/presentation/face_id_auth_service.dart';
 import '../../auth/presentation/sign_in_action.dart';
 import '../../settings/presentation/appearance/widgets/app_theme_selector/app_theme_selector.dart';
 import '../../settings/presentation/connection/custom_headers_section.dart';
@@ -1181,10 +1182,43 @@ class _ServerStep extends HookConsumerWidget {
         if (state.value == _TestState.idle &&
             validServerBaseUrl(urlController.text.trim()) != null) ...[
           const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: busy
+                ? null
+                : () async {
+                    final base = validServerBaseUrl(urlController.text.trim());
+                    if (base == null) return;
+                    final toast = ref.read(toastProvider);
+                    state.value = _TestState.signingIn;
+                    try {
+                      late String signedInUser;
+                      await finishOnboardingSignIn(ref, () async {
+                        await adopt(base);
+                        signedInUser = await signInOrRegisterWithFaceId(
+                          ref,
+                          serverBaseUrl: base,
+                        );
+                      });
+                      toast?.show('Signed in with Face ID as $signedInUser');
+                      if (context.mounted) onSignedIn();
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      errorDetail.value = e.toString();
+                      state.value = _TestState.idle;
+                      toast?.showError(e.toString());
+                    }
+                  },
+            icon: const Icon(FluentIcons.person_passkey_24_regular),
+            label: const Text('Sign in with Face ID'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
-                child: FilledButton.icon(
+                child: FilledButton.tonalIcon(
                   onPressed: busy
                       ? null
                       : () => openCodeDialog(AccountCodeMode.registration),
@@ -1370,6 +1404,41 @@ class _ServerStep extends HookConsumerWidget {
                   ? context.l10n.onboardingSigningIn
                   : context.l10n.onboardingSignIn,
             ),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size.fromHeight(46),
+            ),
+          ),
+          const SizedBox(height: 8),
+          FilledButton.tonalIcon(
+            onPressed: busy
+                ? null
+                : () async {
+                    final base =
+                        resolvedUrl.value ??
+                        validServerBaseUrl(urlController.text.trim());
+                    if (base == null || base.isEmpty) return;
+                    final toast = ref.read(toastProvider);
+                    state.value = _TestState.signingIn;
+                    try {
+                      late String signedInUser;
+                      await finishOnboardingSignIn(ref, () async {
+                        await adopt(base);
+                        signedInUser = await signInOrRegisterWithFaceId(
+                          ref,
+                          serverBaseUrl: base,
+                        );
+                      });
+                      toast?.show('Signed in with Face ID as $signedInUser');
+                      if (context.mounted) onSignedIn();
+                    } catch (e) {
+                      if (!context.mounted) return;
+                      errorDetail.value = e.toString();
+                      state.value = _TestState.needsLogin;
+                      toast?.showError(e.toString());
+                    }
+                  },
+            icon: const Icon(FluentIcons.person_passkey_24_regular),
+            label: const Text('Sign in with Face ID'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(46),
             ),

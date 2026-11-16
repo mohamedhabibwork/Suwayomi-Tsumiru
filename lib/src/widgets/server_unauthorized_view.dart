@@ -12,10 +12,12 @@ import '../constants/db_keys.dart';
 import '../constants/enum.dart';
 import '../features/account/data/account_actions.dart';
 import '../features/account/presentation/account_code_dialog.dart';
+import '../features/auth/presentation/face_id_auth_service.dart';
 import '../features/settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../features/settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../routes/router_config.dart';
 import '../utils/extensions/custom_extensions.dart';
+import '../utils/misc/toast/toast.dart';
 import '../utils/motion/reduce_motion.dart';
 import 'emoticons.dart';
 import 'server_unreachable_view.dart';
@@ -58,11 +60,27 @@ class ServerUnauthorizedView extends ConsumerWidget {
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+          FilledButton.icon(
+            onPressed: () async {
+              final toast = ref.read(toastProvider);
+              try {
+                final user = await signInOrRegisterWithFaceId(
+                  ref,
+                  serverBaseUrl: serverUrl,
+                );
+                toast?.show('Signed in with Face ID as $user');
+              } catch (e) {
+                toast?.showError(e.toString());
+              }
+            },
+            icon: const Icon(FluentIcons.person_passkey_24_regular),
+            label: const Text('Sign in with Face ID'),
+          ),
           Row(
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
-              FilledButton.icon(
+              FilledButton.tonalIcon(
                 onPressed: () => showDialog<void>(
                   context: context,
                   builder: (_) => AccountCodeDialog(

@@ -66,6 +66,8 @@
 		<false/>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Use Face ID to quickly sign in and secure your generated Mangaka FC account.</string>
 		<key>NSLocalNetworkUsageDescription</key>
 		<string>Find and connect to your Suwayomi server on your local network.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>

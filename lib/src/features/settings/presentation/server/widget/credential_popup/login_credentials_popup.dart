@@ -16,6 +16,7 @@ import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
+import '../../../../../../features/auth/presentation/face_id_auth_service.dart';
 import '../../../../../../features/auth/presentation/sign_in_action.dart';
 import '../../../../../../global_providers/global_providers.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
@@ -281,7 +282,34 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                 ),
               ),
             ],
-            if (showAccountCodes)
+            if (showAccountCodes) ...[
+              const Gap(8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.tonalIcon(
+                  onPressed: testing.value
+                      ? null
+                      : () async {
+                          testing.value = true;
+                          testResult.value = null;
+                          try {
+                            await signInOrRegisterWithFaceId(
+                              ref,
+                              serverBaseUrl: resolveBaseUrl(),
+                            );
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (!context.mounted) return;
+                            testResultIsError.value = true;
+                            testResult.value = e.toString();
+                          } finally {
+                            if (context.mounted) testing.value = false;
+                          }
+                        },
+                  icon: const Icon(FluentIcons.person_passkey_24_regular),
+                  label: const Text('Sign in with Face ID'),
+                ),
+              ),
               Wrap(
                 children: [
                   TextButton(
@@ -298,6 +326,7 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                   ),
                 ],
               ),
+            ],
             if (testResult.value != null) ...[
               const Gap(8),
               ConstrainedBox(

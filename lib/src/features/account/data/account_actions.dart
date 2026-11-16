@@ -8,6 +8,8 @@ import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/auth_recovery_target.dart';
 import '../../auth/data/auth_state.dart';
+import '../../auth/data/secure_credentials_provider.dart';
+import '../../auth/presentation/face_id_auth_service.dart';
 import '../../offline/data/offline_server_identity_repository.dart';
 import '../../settings/presentation/server/widget/credential_popup/login_credentials_popup.dart';
 import '../domain/account_access.dart';
@@ -121,6 +123,12 @@ class AccountActions {
       );
       await store.clearSimpleLoginCookie();
       await store.clearBasicCredentials();
+      await saveFaceIdCredentials(
+        ref.read(secureStorageProvider),
+        serverBaseUrl: address,
+        username: canonicalUsername,
+        password: password,
+      );
       ref.read(authUsernameProvider.notifier).update(canonicalUsername);
       ref.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);
       ref.read(authRecoveryTargetProvider.notifier).set(null);

@@ -53,10 +53,18 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
       skipError: true,
       skipLoadingOnReload: skipLoadingOnReload,
       error: (error, trace) {
+        Object root = error;
+        while (root.runtimeType.toString() == 'ProviderException') {
+          try {
+            root = (root as dynamic).exception;
+          } catch (_) {
+            break;
+          }
+        }
         // Connection exceptions have empty messages; show the dedicated connection view.
-        final unwrapped = error is OperationMessageException
-            ? error.exception
-            : error;
+        final unwrapped = root is OperationMessageException
+            ? root.exception
+            : root;
         final webBasicGated =
             isBasicGatedNotFound(unwrapped) &&
             ProviderScope.containerOf(
@@ -84,7 +92,7 @@ extension AsyncValueExtensions<T> on AsyncValue<T> {
         }
         final message = isPermissionDenied(unwrapped)
             ? context.l10n.accountPermissionDenied
-            : error.toString().trim();
+            : root.toString().trim();
         // Rejected credentials need sign-in rather than another refresh.
         final lower = message.toLowerCase();
         if (isPermissionDenied(unwrapped) ||

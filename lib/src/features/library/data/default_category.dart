@@ -2,7 +2,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
-import '../../../utils/network/graphql_errors.dart';
 import '../../account/data/account_providers.dart';
 import '../../account/domain/account_access.dart';
 import '../../offline/data/offline_repository.dart';
@@ -24,18 +23,15 @@ final defaultCategoryIdProvider = FutureProvider<int?>((ref) async {
   );
   final repository = ref.watch(categoryRepositoryProvider);
   final capability = await capabilityFuture.catchError(
-    (Object error, StackTrace stack) {
-      if (serverUnreachable || isConnectionError(error)) {
-        return AccountCapability.unknown;
-      }
-      Error.throwWithStackTrace(error, stack);
-    },
+    (Object error, StackTrace stack) => AccountCapability.unknown,
   );
-  return switch (capability) {
-    AccountCapability.unsupported => 0,
-    AccountCapability.supported => repository.getDefaultCategoryId(),
-    _ => null,
-  };
+  if (capability == AccountCapability.unsupported) return 0;
+  if (capability != AccountCapability.supported) return null;
+  try {
+    return await repository.getDefaultCategoryId();
+  } catch (_) {
+    return null;
+  }
 });
 
 final settledDefaultCategoryIdProvider = Provider<int?>((ref) {

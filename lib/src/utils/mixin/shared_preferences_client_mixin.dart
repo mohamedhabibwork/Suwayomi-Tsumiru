@@ -54,11 +54,8 @@ String scopedPrefKey(DBKeys key, int? userId) {
 int? _resolveActiveUserId(Ref ref, DBKeys key) {
   if (kDeviceScopedDBKeys.contains(key)) return null;
   try {
-    return ref.watch(
-      authCredentialsStoreProvider.select(
-        (state) => state.value?.accountBinding?.userId,
-      ),
-    );
+    final authState = ref.watch(authCredentialsStoreProvider);
+    return authState.hasError ? null : authState.asData?.value.accountBinding?.userId;
   } on Object {
     return null;
   }

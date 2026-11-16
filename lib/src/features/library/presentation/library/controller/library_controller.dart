@@ -286,7 +286,7 @@ bool libraryEntryOutdated(MangaDto? listed, MangaDto? fresh) {
 Future<List<MangaDto>?> categoryMangaList(Ref ref, int categoryId) async {
   final defaultIdFuture = ref.watch(defaultCategoryIdProvider.future);
   final allFuture = ref.watch(libraryMangaListProvider.future);
-  final defaultId = await defaultIdFuture;
+  final defaultId = await defaultIdFuture.catchError((Object _) => null);
   final all = await allFuture;
   if (all == null) return null;
   return all.where((m) {

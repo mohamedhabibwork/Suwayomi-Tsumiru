@@ -2,9 +2,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tsumiru/src/constants/db_keys.dart';
+import 'package:tsumiru/src/features/account/data/account_providers.dart';
+import 'package:tsumiru/src/features/auth/data/auth_credentials_store.dart';
+import 'package:tsumiru/src/features/library/data/default_category.dart';
 import 'package:tsumiru/src/features/settings/presentation/appearance/appearance_screen.dart';
 import 'package:tsumiru/src/global_providers/global_providers.dart';
 import 'package:tsumiru/src/utils/mixin/shared_preferences_client_mixin.dart';
+
+class _FailingAuthStore extends AuthCredentialsStore {
+  @override
+  Future<AuthCredentialsState> build() async {
+    throw StateError('Keychain failure in build');
+  }
+}
 
 void main() {
   group('scopedPrefKey', () {
@@ -50,6 +60,49 @@ void main() {
       // Force provider rebuild on the same Notifier instance
       container.invalidate(hideBottomTabLabelsProvider);
       expect(container.read(hideBottomTabLabelsProvider), isTrue);
+    });
+
+    test('SharedPreferenceClientMixin handles authCredentialsStoreProvider error state gracefully without throwing ProviderException', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [
+          sharedPreferencesProvider.overrideWithValue(prefs),
+          authCredentialsStoreProvider.overrideWith(_FailingAuthStore.new),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Await the failure to settle in authCredentialsStoreProvider
+      try {
+        await container.read(authCredentialsStoreProvider.future);
+      } catch (_) {}
+
+      expect(() => container.read(hideBottomTabLabelsProvider), returnsNormally);
+    });
+
+    test('accountAccessProvider returns user: null without throwing when unauthenticated', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final access = await container.read(accountAccessProvider.future);
+      expect(access.user, isNull);
+    });
+
+    test('defaultCategoryIdProvider handles unauthenticated gracefully without throwing', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final container = ProviderContainer(
+        overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      );
+      addTearDown(container.dispose);
+
+      final defaultId = await container.read(defaultCategoryIdProvider.future);
+      expect(defaultId, isNull);
     });
   });
 }

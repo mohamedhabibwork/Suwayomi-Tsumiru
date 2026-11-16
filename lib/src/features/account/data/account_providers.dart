@@ -53,18 +53,26 @@ final accountAccessProvider = FutureProvider<AccountAccess>((ref) async {
   final capability = await repository.capability(stillWanted: valid);
   if (!valid()) throw StateError('Authentication session changed');
   if (capability == AccountCapability.unknown) {
-    throw StateError('Could not verify account support');
+    return AccountAccess(capability: AccountCapability.unknown);
   }
   if (capability != AccountCapability.supported) {
     return AccountAccess(capability: capability);
   }
-  final user = await repository.current();
+  if (binding == null || credentials.uiAccessToken == null) {
+    return AccountAccess(capability: capability, user: null);
+  }
+  final Fragment$AccountDto? user;
+  try {
+    user = await repository.current();
+  } catch (_) {
+    return AccountAccess(capability: capability, user: null);
+  }
   if (!valid()) throw StateError('Authentication session changed');
   if (user == null || user.id <= 0 || user.username.isEmpty) {
-    throw StateError('Could not verify the signed-in account');
+    return AccountAccess(capability: capability, user: null);
   }
-  if (binding?.userId != null) {
-    if (binding!.userId != user.id) {
+  if (binding.userId != null) {
+    if (binding.userId != user.id) {
       throw StateError('The server returned a different account');
     }
     final preferences = ref.read(sharedPreferencesProvider);
@@ -85,7 +93,7 @@ final accountAccessProvider = FutureProvider<AccountAccess>((ref) async {
       }
       await preferences.setString(
         'account.current/${binding.catalogId}',
-        jsonEncode({'catalogId': binding.catalogId, 'user': user.toJson()}),
+        jsonEncode({'catalogId': binding.catalogId, 'user': user!.toJson()}),
       );
     });
     if (!saved || !valid()) throw StateError('Authentication session changed');

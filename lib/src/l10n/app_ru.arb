@@ -1152,7 +1152,7 @@
     "@authTestConnectionFailedMode": {
         "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
     },
-    "authBrowserSessionUnverified": "Сервер не подтвердил сеанс браузера. Проверьте режим аутентификации и подключение. Для Simple Login размещайте Tsumiru на том же сайте, что и сервер.",
+    "authBrowserSessionUnverified": "Сервер не подтвердил сеанс браузера. Проверьте режим аутентификации и подключение. Для Simple Login размещайте Mangaka на том же сайте, что и сервер.",
     "authTestConnectionFailedShape": "Сервер ответил неожиданным образом. Убедитесь, что URL указывает на Suwayomi.",
     "@authTestConnectionFailedShape": {
         "description": "Error message when the server's response is not the expected shape"
@@ -1377,7 +1377,7 @@
         "description": "Copied Text"
     },
     "finish": "Готово",
-    "onboardingWelcomeTitle": "Добро пожаловать в Tsumiru",
+    "onboardingWelcomeTitle": "Добро пожаловать в Mangaka",
     "onboardingWelcomeSubtitle": "Читалка для вашей библиотеки Suwayomi.",
     "onboardingChooseTheme": "Выберите тему",
     "onboardingServerTitle": "Подключите сервер",
@@ -1722,7 +1722,7 @@
     "responseFallback": "Резервный ответ",
     "responseFallbackDescription": "Использовать ответ FlareSolverr, если сервер получает задание Cloudflare, а FlareSolverr — нет и потому не может его решить (не работает для изображений)",
     "githubServer": "GitHub-сервер",
-    "githubTsumiru": "GitHub Tsumiru",
+    "githubTsumiru": "GitHub Mangaka",
     "helpTranslate": "Помочь с переводом",
     "informAboutAvailableUpdate": "Сообщать о доступном обновлении",
     "informAboutVersionUpdate": "Сообщать об обновлении версии",
@@ -2226,7 +2226,7 @@
         }
     },
     "backgroundDownloadScheduleFailed": "Не удалось запланировать фоновые загрузки. Повторите из раздела «Загрузки».",
-    "notificationDownloadsPausedBackground": "Android приостановил фоновые загрузки. Откройте Tsumiru, чтобы повторить.",
+    "notificationDownloadsPausedBackground": "Android приостановил фоновые загрузки. Откройте Mangaka, чтобы повторить.",
     "notificationDownloadsPausedService": "Не удалось запустить загрузки. Нажмите «Повторить» в разделе «Загрузки».",
     "notificationDownloadsPausedNoServer": "Нет подключения. Загрузки возобновятся, когда оно вернётся.",
     "@notificationDownloadsPausedNoServer": {
@@ -2236,7 +2236,7 @@
     "@notificationDownloadsPausedWifi": {
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
-    "notificationAppUpdateBody": "Доступна версия Tsumiru {version}",
+    "notificationAppUpdateBody": "Доступна версия Mangaka {version}",
     "@notificationAppUpdateBody": {
         "placeholders": {
             "version": {
@@ -3050,7 +3050,7 @@
     "@offlineChapterDelete": {
         "description": "Button / tooltip to remove an on-device chapter"
     },
-    "notificationDownloadsPausedBudget": "Достигнут лимит фоновых загрузок Android. Откройте Tsumiru, чтобы повторить.",
+    "notificationDownloadsPausedBudget": "Достигнут лимит фоновых загрузок Android. Откройте Mangaka, чтобы повторить.",
     "accountRegistrationTitle": "Создать аккаунт",
     "accountRecoveryTitle": "Сбросить пароль",
     "accountRegistrationCode": "Код регистрации",
@@ -3407,7 +3407,7 @@
     "webInterfaceWebUIDescription": "Использовать WebUI по умолчанию",
     "webInterfaceVUI": "VUI",
     "webInterfaceVUIDescription": "Веб-интерфейс с упором на предпросмотр, созданный на svelte",
-    "webInterfaceTsumiru": "Tsumiru",
+    "webInterfaceTsumiru": "Mangaka",
     "webInterfaceTsumiruDescription": "Веб-интерфейс на Flutter с приложениями для всех платформ",
     "webInterfaceCustom": "Свой",
     "webInterfaceCustomDescription": "Использовать свой WebUI. Замените содержимое каталога «webUI» в корне сервера файлами своего WebUI.",
@@ -3470,7 +3470,7 @@
     },
     "webInterfaceCustomUpdates": "Свои интерфейсы устанавливаются вручную в каталог «webUI» сервера.",
     "updatedByYourServer": "Обновлено вашим сервером",
-    "serverInstalledNewTsumiru": "На вашем сервере установлена новая версия Tsumiru",
+    "serverInstalledNewTsumiru": "На вашем сервере установлена новая версия Mangaka",
     "reloadWebBuild": "Перезагрузить",
     "couldntReachSource": "Не удалось связаться с {source}",
     "@couldntReachSource": {
@@ -3493,7 +3493,7 @@
     "@coverUpdateFailed": {
         "description": "Error after saving a custom cover fails"
     },
-    "customCoversTsumiruOnly": "Свои обложки отображаются только в клиентах Tsumiru.",
+    "customCoversTsumiruOnly": "Свои обложки отображаются только в клиентах Mangaka.",
     "@customCoversTsumiruOnly": {
         "description": "Note under the cover picker search field"
     },
@@ -3656,7 +3656,7 @@
     "confirmWebInterfaceChangeMessage": "Это изменит веб-интерфейс, который сервер отдаёт всем.",
     "removeCustomCovers": "Удалить свои обложки",
     "removeCustomCoversTitle": "Удалить свои обложки?",
-    "removeCustomCoversBody": "Все серии вернутся к серверным обложкам во всех ваших клиентах Tsumiru.",
+    "removeCustomCoversBody": "Все серии вернутся к серверным обложкам во всех ваших клиентах Mangaka.",
     "customCoversRemoved": "Свои обложки удалены",
     "migrationSourceNotInstalled": "Источник не установлен",
     "migrationSortCount": "Количество",
@@ -3849,7 +3849,7 @@
     "updateRemindLater": "Напомнить позже",
     "updateIgnore": "Игнорировать",
     "updateChangelog": "Список изменений",
-    "couldNotUpdateTsumiru": "Не удалось обновить Tsumiru",
+    "couldNotUpdateTsumiru": "Не удалось обновить Mangaka",
     "serverVersionAvailable": "Версия сервера {version} ({channel}) доступна для загрузки",
     "@serverVersionAvailable": {
         "placeholders": {
@@ -3872,7 +3872,7 @@
             }
         }
     },
-    "tsumiruVersionAvailable": "Версия Tsumiru {version} ({channel}) доступна для загрузки",
+    "tsumiruVersionAvailable": "Версия Mangaka {version} ({channel}) доступна для загрузки",
     "@tsumiruVersionAvailable": {
         "placeholders": {
             "version": {
@@ -3883,7 +3883,7 @@
             }
         }
     },
-    "tsumiruVersionUpdated": "Tsumiru обновлён до версии {version} ({channel})",
+    "tsumiruVersionUpdated": "Mangaka обновлён до версии {version} ({channel})",
     "@tsumiruVersionUpdated": {
         "placeholders": {
             "version": {

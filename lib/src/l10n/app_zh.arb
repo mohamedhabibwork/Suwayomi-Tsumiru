@@ -1477,7 +1477,7 @@
     "next": "下一步",
     "finish": "完成",
     "onboardingSkip": "跳过",
-    "onboardingWelcomeTitle": "欢迎使用 Tsumiru",
+    "onboardingWelcomeTitle": "欢迎使用 Mangaka",
     "onboardingWelcomeSubtitle": "用于阅读 Suwayomi 书架的阅读器。",
     "onboardingChooseTheme": "选择主题",
     "onboardingServerTitle": "连接服务器",
@@ -2344,7 +2344,7 @@
         }
     },
     "backgroundDownloadScheduleFailed": "无法安排后台下载。请在“下载”页重试。",
-    "notificationDownloadsPausedBackground": "Android 已暂停后台下载。打开 Tsumiru 重试。",
+    "notificationDownloadsPausedBackground": "Android 已暂停后台下载。打开 Mangaka 重试。",
     "notificationDownloadsPausedService": "无法启动下载。请点按“下载”页中的重试。",
     "notificationDownloadsPausedTitle": "下载已暂停",
     "@notificationDownloadsPausedTitle": {
@@ -2359,7 +2359,7 @@
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
     "notificationAppUpdateTitle": "有可用更新",
-    "notificationAppUpdateBody": "Tsumiru {version} 可用",
+    "notificationAppUpdateBody": "Mangaka {version} 可用",
     "@notificationAppUpdateBody": {
         "placeholders": {
             "version": {
@@ -3273,12 +3273,12 @@
     "@offlineChaptersQueued": {
         "description": "Status label for a chapter waiting in the download queue"
     },
-    "notificationDownloadsPausedBudget": "Android 的后台下载上限已达到。打开 Tsumiru 重试。",
+    "notificationDownloadsPausedBudget": "Android 的后台下载上限已达到。打开 Mangaka 重试。",
     "accountPermissionDenied": "你的账户无权执行此操作。",
     "migrationIdentityUnavailable": "请先连接服务器并登录，再进行迁移。",
     "accountSettingsUnavailable": "无法验证账户设置。请重新连接后重试。",
     "manageSettingsPermissionRequired": "你需要管理服务器设置的权限。",
-    "authBrowserSessionUnverified": "服务器未确认你的浏览器会话。请检查身份验证模式和连接。使用简单登录时，Tsumiru 必须与服务器部署在同一站点。",
+    "authBrowserSessionUnverified": "服务器未确认你的浏览器会话。请检查身份验证模式和连接。使用简单登录时，Mangaka 必须与服务器部署在同一站点。",
     "onboardingCheckingConnection": "正在检查连接…",
     "onboardingSigningIn": "正在登录…",
     "deleteChaptersConfirm": "确定要删除所选章节吗？",

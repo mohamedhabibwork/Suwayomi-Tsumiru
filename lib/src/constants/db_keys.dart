@@ -10,12 +10,12 @@ import 'app_theme.dart';
 import 'enum.dart';
 
 enum DBKeys {
-  serverUrl('http://127.0.0.1'),
+  serverUrl('https://manga.firstcallmedical.app'),
   // External address; serverUrl holds the currently selected endpoint.
-  serverExternalUrl(null),
+  serverExternalUrl('https://manga.firstcallmedical.app'),
   serverLanUrl(null),
   serverPort(4567),
-  serverPortToggle(true),
+  serverPortToggle(false),
   onboardingComplete(false),
   sourceLanguageFilter(["all", "lastUsed", "en", "localsourcelang"]),
   // Source ids in descending migration priority.
@@ -29,9 +29,9 @@ enum DBKeys {
   // Fresh installs are seeded dark by seedFirstRunPreferences.
   themeMode(ThemeMode.system),
   isTrueBlack(false),
-  authType(AuthType.none),
+  authType(AuthType.uiLogin),
   basicCredentials(null),
-  authUsername(null),
+  authUsername('admin'),
   // Blocks reuse of credentials left behind by a refused secure-storage delete.
   authCredentialsInvalidated(false),
   readerMode(ReaderMode.singleHorizontalRTL),
@@ -109,11 +109,11 @@ enum DBKeys {
   pinchToZoom(true),
   readerIgnoreSafeArea(true),
   appTheme(AppTheme.indigoNight),
-  customThemeColor(0xFF7C7BFF),
+  customThemeColor(0xFFA855F7),
   historyEnabled(true),
   historyRetentionDays(90),
   // Keep synchronized with TimeoutConstants.requestTimeoutDefaultMs.
-  serverRequestTimeout(30000), // milliseconds
+  serverRequestTimeout(90000), // milliseconds
   autoRefreshOnTimeout(true),
   autoRefreshRetryDelay(1000), // milliseconds
   offlineTimeEvictEnabled(false),

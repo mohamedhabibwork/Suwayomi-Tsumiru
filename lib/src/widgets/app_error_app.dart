@@ -34,7 +34,7 @@ class AppErrorApp extends StatelessWidget {
                     const Icon(FluentIcons.error_circle_24_regular, size: 48),
                     const SizedBox(height: 16),
                     const Text(
-                      "Tsumiru couldn't start",
+                      "Mangaka couldn't start",
                       style:
                           TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                       textAlign: TextAlign.center,

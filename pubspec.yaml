@@ -128,17 +128,16 @@ flutter:
           weight: 700
 
 flutter_native_splash:
-  color: "#0b0d1a"
+  color: "#070916"
   image: assets/icons/launcher/splash_icon.png
   android_12:
-    color: "#0b0d1a"
-    icon_background_color: "#0b0d1a"
+    color: "#070916"
+    icon_background_color: "#070916"
     image: assets/icons/launcher/splash_icon.png
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  adaptive_icon_background: "assets/icons/launcher/tsumiru_icon_bg.png"
-  adaptive_icon_foreground_inset: 0
+  adaptive_icon_background: "#070916"
   adaptive_icon_foreground: "assets/icons/launcher/tsumiru_icon_fg.png"
   ios: true
   remove_alpha_ios: true
@@ -147,8 +146,8 @@ flutter_launcher_icons:
   web:
     generate: true
     image_path: "assets/icons/launcher/tsumiru_icon.png"
-    background_color: "#02061D"
-    theme_color: "#7c7bff"
+    background_color: "#070916"
+    theme_color: "#a855f7"
   windows:
     generate: true
     image_path: "assets/icons/launcher/tsumiru_icon_rounded.png"

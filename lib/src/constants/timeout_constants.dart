@@ -1,7 +1,7 @@
 /// Timeout values are in milliseconds.
 class TimeoutConstants {
   // Give each retry the full timeout: client aborts do not stop server-side fetches.
-  static const int requestTimeoutDefaultMs = 30000;
+  static const int requestTimeoutDefaultMs = 90000;
   static const int requestTimeoutMinMs = 1000;
   static const int requestTimeoutMaxMs = 120000;
 

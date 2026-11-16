@@ -22,11 +22,11 @@ enum AppTheme {
   /// (accent, accent2) for the picker swatch.
   (Color, Color) get swatch => switch (this) {
         AppTheme.indigoNight =>
-          (const Color(0xFF7C7BFF), const Color(0xFF33D6FF)),
+          (const Color(0xFFB46CFF), const Color(0xFF00E5FF)),
         AppTheme.carbon => (const Color(0xFF19E6B0), const Color(0xFF22D3EE)),
         AppTheme.plum => (const Color(0xFFFF5DB1), const Color(0xFFFF9F5C)),
         AppTheme.custom =>
-          (const Color(0xFF7C7BFF), const Color(0xFF33D6FF)),
+          (const Color(0xFFB46CFF), const Color(0xFF00E5FF)),
         AppTheme.regression =>
           (const Color(0xFF3D8BFF), const Color(0xFF6FD2FF)),
         AppTheme.ember =>

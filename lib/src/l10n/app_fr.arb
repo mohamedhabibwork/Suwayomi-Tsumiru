@@ -1146,7 +1146,7 @@
     "@authTestConnectionFailedMode": {
         "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
     },
-    "authBrowserSessionUnverified": "Le serveur n'a pas confirmé votre session de navigateur. Vérifiez le mode d'authentification et la connexion. Pour \"Connexion simple\", servez Tsumiru depuis le même site que votre serveur.",
+    "authBrowserSessionUnverified": "Le serveur n'a pas confirmé votre session de navigateur. Vérifiez le mode d'authentification et la connexion. Pour \"Connexion simple\", servez Mangaka depuis le même site que votre serveur.",
     "authTestConnectionFailedShape": "Le serveur n'a pas répondu de la façon attendue. Vérifiez que l'URL pointe vers Suwayomi.",
     "@authTestConnectionFailedShape": {
         "description": "Error message when the server's response is not the expected shape"
@@ -1378,7 +1378,7 @@
         "description": "Copied Text"
     },
     "finish": "Terminer",
-    "onboardingWelcomeTitle": "Bienvenue dans Tsumiru",
+    "onboardingWelcomeTitle": "Bienvenue dans Mangaka",
     "onboardingWelcomeSubtitle": "Un lecteur pour votre bibliothèque Suwayomi.",
     "onboardingChooseTheme": "Choisir le thème",
     "onboardingServerTitle": "Connectez votre serveur",
@@ -2147,7 +2147,7 @@
     "responseFallback": "Solution de secours",
     "responseFallbackDescription": "Utilise la réponse de FlareSolverr si le serveur rencontre un défi Cloudflare que FlareSolverr ne rencontre pas et est donc incapable de résoudre (ne fonctionne pas pour les images)",
     "githubServer": "GitHub Serveur",
-    "githubTsumiru": "GitHub Tsumiru",
+    "githubTsumiru": "GitHub Mangaka",
     "helpTranslate": "Aidez à traduire",
     "informAboutAvailableUpdate": "Informer des mises à jour disponibles",
     "informAboutVersionUpdate": "Informer sur la mise à jour de version",
@@ -2339,7 +2339,7 @@
         }
     },
     "backgroundDownloadScheduleFailed": "Impossible de planifier les téléchargements en arrière-plan. Réessayez depuis le menu Téléchargements.",
-    "notificationDownloadsPausedBackground": "Android a mis en pause les téléchargements en arrière-plan. Ouvrez Tsumiru pour réessayer.",
+    "notificationDownloadsPausedBackground": "Android a mis en pause les téléchargements en arrière-plan. Ouvrez Mangaka pour réessayer.",
     "notificationDownloadsPausedService": "Impossible de démarrer les téléchargements. Appuyez sur Réessayer dans Téléchargements pour essayer à nouveau.",
     "notificationDownloadsPausedNoServer": "Aucune connexion. Ils reprendront quand elle reviendra.",
     "@notificationDownloadsPausedNoServer": {
@@ -2349,7 +2349,7 @@
     "@notificationDownloadsPausedWifi": {
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
-    "notificationAppUpdateBody": "Tsumiru {version} est disponible",
+    "notificationAppUpdateBody": "Mangaka {version} est disponible",
     "@notificationAppUpdateBody": {
         "placeholders": {
             "version": {

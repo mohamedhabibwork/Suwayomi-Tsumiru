@@ -16,4 +16,4 @@ const kDebounceDuration = Duration(milliseconds: 500);
 
 const kPositionPlaceholder = -1;
 
-const kAppName = 'Tsumiru';
+const kAppName = 'Mangaka';

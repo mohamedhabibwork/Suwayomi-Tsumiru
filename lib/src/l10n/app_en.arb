@@ -1311,7 +1311,7 @@
   "authTestConnectionFailedNetwork": "Couldn't reach server. Check URL and connectivity.",
   "authTestConnectionFailedAuth": "Login failed. Check username and password.",
   "authTestConnectionFailedMode": "Server may not be in the selected auth mode. Check the server's authMode setting.",
-  "authBrowserSessionUnverified": "The server did not confirm your browser session. Check the authentication mode and connection. For Simple Login, serve Tsumiru from the same site as your server.",
+  "authBrowserSessionUnverified": "The server did not confirm your browser session. Check the authentication mode and connection. For Simple Login, serve Mangaka from the same site as your server.",
   "authTestConnectionFailedShape": "Server didn't respond as expected. Check that the URL points to Suwayomi.",
   "authTestConnectionFailedTls": "TLS handshake failed. Check whether your server uses http:// or https://.",
   "authSessionExpired": "Session expired. Sign in again.",
@@ -1594,7 +1594,7 @@
   "next": "Next",
   "finish": "Finish",
   "onboardingSkip": "Skip",
-  "onboardingWelcomeTitle": "Welcome to Tsumiru",
+  "onboardingWelcomeTitle": "Welcome to Mangaka",
   "onboardingWelcomeSubtitle": "A reader for your Suwayomi library.",
   "onboardingChooseTheme": "Choose your theme",
   "onboardingServerTitle": "Connect your server",
@@ -2049,7 +2049,7 @@
   "general": "General",
   "gitHub": "GitHub",
   "githubServer": "GitHub Server",
-  "githubTsumiru": "GitHub Tsumiru",
+  "githubTsumiru": "GitHub Mangaka",
   "globalSearch": "Global search",
   "globalUpdate": "Global update",
   "help": "Help",
@@ -2764,7 +2764,7 @@
   "notificationDownloadErrorTitle": "Download failed",
   "notificationDownloadErrorBody": "{count} chapters failed to download",
   "backgroundDownloadScheduleFailed": "Couldn't schedule background downloads. Try again from Downloads.",
-  "notificationDownloadsPausedBackground": "Android paused background downloads. Open Tsumiru to try again.",
+  "notificationDownloadsPausedBackground": "Android paused background downloads. Open Mangaka to try again.",
   "notificationDownloadsPausedService": "Couldn't start downloads. Tap Retry in Downloads to try again.",
   "notificationDownloadsPausedTitle": "Downloads paused",
   "@notificationDownloadsPausedTitle": {
@@ -2786,7 +2786,7 @@
     }
   },
   "notificationAppUpdateTitle": "Update available",
-  "notificationAppUpdateBody": "Tsumiru {version} is available",
+  "notificationAppUpdateBody": "Mangaka {version} is available",
   "@notificationAppUpdateBody": {
     "placeholders": {
       "version": {
@@ -3977,7 +3977,7 @@
   "@offlineChaptersQueued": {
     "description": "Status label for a chapter waiting in the download queue"
   },
-  "notificationDownloadsPausedBudget": "Android's background download limit was reached. Open Tsumiru to try again.",
+  "notificationDownloadsPausedBudget": "Android's background download limit was reached. Open Mangaka to try again.",
   "accountRegistrationTitle": "Create account",
   "accountRecoveryTitle": "Reset password",
   "accountRegistrationCode": "Registration code",
@@ -4280,7 +4280,7 @@
   "webInterfaceWebUIDescription": "Use the default WebUI",
   "webInterfaceVUI": "VUI",
   "webInterfaceVUIDescription": "A preview focused web frontend built with svelte",
-  "webInterfaceTsumiru": "Tsumiru",
+  "webInterfaceTsumiru": "Mangaka",
   "webInterfaceTsumiruDescription": "A web frontend built with Flutter, with apps for every platform",
   "webInterfaceCustom": "Custom",
   "webInterfaceCustomDescription": "Use a custom WebUI. Replace the content of the \"webUI\" directory in the server's root directory with the custom WebUI files.",
@@ -4343,7 +4343,7 @@
   },
   "webInterfaceCustomUpdates": "Custom interfaces are installed manually in the server's \"webUI\" directory.",
   "updatedByYourServer": "Updated by your server",
-  "serverInstalledNewTsumiru": "A new version of Tsumiru is installed on your server",
+  "serverInstalledNewTsumiru": "A new version of Mangaka is installed on your server",
   "reloadWebBuild": "Reload",
   "couldntReachSource": "Couldn't reach {source}",
   "@couldntReachSource": {
@@ -4366,7 +4366,7 @@
   "@coverUpdateFailed": {
     "description": "Error after saving a custom cover fails"
   },
-  "customCoversTsumiruOnly": "Custom covers only show in Tsumiru clients.",
+  "customCoversTsumiruOnly": "Custom covers only show in Mangaka clients.",
   "@customCoversTsumiruOnly": {
     "description": "Note under the cover picker search field"
   },
@@ -4523,14 +4523,14 @@
   "confirmWebInterfaceChangeMessage": "This changes the web interface the server serves for everyone.",
   "removeCustomCovers": "Remove custom covers",
   "removeCustomCoversTitle": "Remove custom covers?",
-  "removeCustomCoversBody": "Every series goes back to its server cover on all your Tsumiru clients.",
+  "removeCustomCoversBody": "Every series goes back to its server cover on all your Mangaka clients.",
   "customCoversRemoved": "Custom covers removed",
   "updateAvailableTitle": "Update available",
   "updatedVersionTitle": "Updated version",
   "updateRemindLater": "Remind later",
   "updateIgnore": "Ignore",
   "updateChangelog": "Changelog",
-  "couldNotUpdateTsumiru": "Could not update Tsumiru",
+  "couldNotUpdateTsumiru": "Could not update Mangaka",
   "serverVersionAvailable": "Server version {version} ({channel}) available for download",
   "@serverVersionAvailable": {
     "placeholders": {
@@ -4553,7 +4553,7 @@
       }
     }
   },
-  "tsumiruVersionAvailable": "Tsumiru version {version} ({channel}) available for download",
+  "tsumiruVersionAvailable": "Mangaka version {version} ({channel}) available for download",
   "@tsumiruVersionAvailable": {
     "placeholders": {
       "version": {
@@ -4564,7 +4564,7 @@
       }
     }
   },
-  "tsumiruVersionUpdated": "Tsumiru was updated to version {version} ({channel})",
+  "tsumiruVersionUpdated": "Mangaka was updated to version {version} ({channel})",
   "@tsumiruVersionUpdated": {
     "placeholders": {
       "version": {

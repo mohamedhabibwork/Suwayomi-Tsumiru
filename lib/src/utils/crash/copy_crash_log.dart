@@ -13,7 +13,7 @@ String crashLogHeader({
   required String serverVersion,
   required String platform,
 }) =>
-    'Tsumiru v$appVersion (build $buildNumber)\n'
+    'Mangaka v$appVersion (build $buildNumber)\n'
     'Server: $serverVersion\n'
     'Platform: $platform\n'
     '---\n';

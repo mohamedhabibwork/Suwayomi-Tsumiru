@@ -1447,7 +1447,7 @@
     "next": "下一步",
     "finish": "完成",
     "onboardingSkip": "跳過",
-    "onboardingWelcomeTitle": "歡迎使用 Tsumiru",
+    "onboardingWelcomeTitle": "歡迎使用 Mangaka",
     "onboardingWelcomeSubtitle": "用於閱讀 Suwayomi 書架的閱讀器。",
     "onboardingChooseTheme": "選擇主題",
     "onboardingServerTitle": "連線伺服器",
@@ -2324,7 +2324,7 @@
         }
     },
     "backgroundDownloadScheduleFailed": "無法安排後臺下載。請在“下載”頁重試。",
-    "notificationDownloadsPausedBackground": "Android 已暫停後臺下載。開啟 Tsumiru 重試。",
+    "notificationDownloadsPausedBackground": "Android 已暫停後臺下載。開啟 Mangaka 重試。",
     "notificationDownloadsPausedService": "無法啟動下載。請點按“下載”頁中的重試。",
     "notificationDownloadsPausedTitle": "下載已暫停",
     "@notificationDownloadsPausedTitle": {
@@ -2339,7 +2339,7 @@
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
     "notificationAppUpdateTitle": "有可用更新",
-    "notificationAppUpdateBody": "Tsumiru {version} 可用",
+    "notificationAppUpdateBody": "Mangaka {version} 可用",
     "@notificationAppUpdateBody": {
         "placeholders": {
             "version": {
@@ -3274,7 +3274,7 @@
     "@offlineChaptersQueued": {
         "description": "Status label for a chapter waiting in the download queue"
     },
-    "notificationDownloadsPausedBudget": "Android 的後臺下載上限已達到。開啟 Tsumiru 重試。",
+    "notificationDownloadsPausedBudget": "Android 的後臺下載上限已達到。開啟 Mangaka 重試。",
     "deleteChaptersConfirm": "確定要刪除所選的章節嗎？",
     "libraryUpdateErrors": "書櫃更新失敗",
     "retryAll": "全部重試",
@@ -3284,7 +3284,7 @@
     "migrationIdentityUnavailable": "請先連線至伺服器並登入，再進行遷移。",
     "accountSettingsUnavailable": "無法驗證帳戶設定。請重新連線後重試。",
     "manageSettingsPermissionRequired": "你需要管理伺服器設定的權限。",
-    "authBrowserSessionUnverified": "伺服器未確認你的瀏覽器工作階段。請檢查驗證模式和連線。使用簡單登入時，Tsumiru 必須與伺服器部署在同一網站。",
+    "authBrowserSessionUnverified": "伺服器未確認你的瀏覽器工作階段。請檢查驗證模式和連線。使用簡單登入時，Mangaka 必須與伺服器部署在同一網站。",
     "onboardingCheckingConnection": "正在檢查連線…",
     "onboardingSigningIn": "正在登入…",
     "onboardingCustomHeadersHint": "僅部分代理伺服器和存取閘道需要。",

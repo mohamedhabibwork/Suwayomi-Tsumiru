@@ -901,7 +901,7 @@
     "@authTestConnectionFailedMode": {
         "description": "Error message when Test Connection succeeds at login but the server appears to be in a different auth mode"
     },
-    "authBrowserSessionUnverified": "El servidor no ha confirmat la sessió del navegador. Comproveu el mode d'autenticació i la connexió. Per a l'inici de sessió simple, serviu Tsumiru des del mateix lloc que el servidor.",
+    "authBrowserSessionUnverified": "El servidor no ha confirmat la sessió del navegador. Comproveu el mode d'autenticació i la connexió. Per a l'inici de sessió simple, serviu Mangaka des del mateix lloc que el servidor.",
     "authTestConnectionFailedShape": "El servidor no ha respost com s'esperava. Comproveu que l'URL apunti a Suwayomi.",
     "@authTestConnectionFailedShape": {
         "description": "Error message when the server's response is not the expected shape"
@@ -1279,7 +1279,7 @@
     "back": "Enrere",
     "finish": "Acaba",
     "onboardingSkip": "Omet",
-    "onboardingWelcomeTitle": "Us donem la benvinguda a Tsumiru",
+    "onboardingWelcomeTitle": "Us donem la benvinguda a Mangaka",
     "onboardingWelcomeSubtitle": "Un lector per a la vostra biblioteca de Suwayomi.",
     "onboardingChooseTheme": "Trieu el tema",
     "onboardingServerTitle": "Connecteu el servidor",
@@ -2510,7 +2510,7 @@
         }
     },
     "backgroundDownloadScheduleFailed": "No s'han pogut programar les baixades en segon pla. Torneu-ho a provar des de Baixades.",
-    "notificationDownloadsPausedBackground": "Android ha posat en pausa les baixades en segon pla. Obriu Tsumiru per tornar-ho a provar.",
+    "notificationDownloadsPausedBackground": "Android ha posat en pausa les baixades en segon pla. Obriu Mangaka per tornar-ho a provar.",
     "notificationDownloadsPausedService": "No s'han pogut iniciar les baixades. Toqueu «Torna-ho a provar» a Baixades.",
     "notificationDownloadsPausedTitle": "Baixades en pausa",
     "@notificationDownloadsPausedTitle": {
@@ -2524,7 +2524,7 @@
     "@notificationDownloadsPausedWifi": {
         "description": "Body when downloads pause because Wi-Fi only is on and the connection is metered"
     },
-    "notificationAppUpdateBody": "Tsumiru {version} està disponible",
+    "notificationAppUpdateBody": "Mangaka {version} està disponible",
     "@notificationAppUpdateBody": {
         "placeholders": {
             "version": {
@@ -3495,7 +3495,7 @@
     "@offlineChapterDelete": {
         "description": "Button / tooltip to remove an on-device chapter"
     },
-    "notificationDownloadsPausedBudget": "S'ha arribat al límit de baixades en segon pla d'Android. Obriu Tsumiru per tornar-ho a provar.",
+    "notificationDownloadsPausedBudget": "S'ha arribat al límit de baixades en segon pla d'Android. Obriu Mangaka per tornar-ho a provar.",
     "accountRegistrationTitle": "Crea un compte",
     "accountRecoveryTitle": "Restableix la contrasenya",
     "accountRegistrationCode": "Codi de registre",
@@ -3737,7 +3737,7 @@
     "webInterfaceUnsupported": "Aquest servidor no admet la configuració de la interfície web.",
     "unsupportedPreference": "L'aplicació no admet aquest paràmetre.",
     "webInterfaceVUIDescription": "Una interfície web centrada en la previsualització, feta amb Svelte",
-    "webInterfaceTsumiru": "Tsumiru",
+    "webInterfaceTsumiru": "Mangaka",
     "webInterfaceTsumiruDescription": "Una interfície web feta amb Flutter, amb aplicacions per a totes les plataformes",
     "webInterfaceCustomDescription": "Utilitza una WebUI personalitzada. Substituïu el contingut del directori «webUI» del directori arrel del servidor pels fitxers de la WebUI personalitzada.",
     "webInterfaceUnknown": "Interfície desconeguda",
@@ -3791,7 +3791,7 @@
     },
     "webInterfaceCustomUpdates": "Les interfícies personalitzades s'instal·len manualment al directori «webUI» del servidor.",
     "updatedByYourServer": "Actualitzat pel servidor",
-    "serverInstalledNewTsumiru": "S'ha instal·lat una versió nova de Tsumiru al servidor",
+    "serverInstalledNewTsumiru": "S'ha instal·lat una versió nova de Mangaka al servidor",
     "reloadWebBuild": "Torna a carregar",
     "couldntReachSource": "No s'ha pogut accedir a {source}",
     "@couldntReachSource": {
@@ -4104,7 +4104,7 @@
     "debugInformation": "Informació de depuració",
     "editNotes": "Edita les notes",
     "githubServer": "Servidor a GitHub",
-    "githubTsumiru": "Tsumiru a GitHub",
+    "githubTsumiru": "Mangaka a GitHub",
     "helpTranslate": "Ajudeu a traduir",
     "informAboutAvailableUpdate": "Informa de les actualitzacions disponibles",
     "informAboutVersionUpdate": "Informa de l'actualització de versió",
@@ -4297,7 +4297,7 @@
     "@coverUpdateFailed": {
         "description": "Error after saving a custom cover fails"
     },
-    "customCoversTsumiruOnly": "Les portades personalitzades només es mostren als clients de Tsumiru.",
+    "customCoversTsumiruOnly": "Les portades personalitzades només es mostren als clients de Mangaka.",
     "@customCoversTsumiruOnly": {
         "description": "Note under the cover picker search field"
     },
@@ -4311,7 +4311,7 @@
     },
     "removeCustomCovers": "Elimina les portades personalitzades",
     "removeCustomCoversTitle": "Voleu eliminar les portades personalitzades?",
-    "removeCustomCoversBody": "Totes les sèries tornen a la portada del servidor a tots els vostres clients de Tsumiru.",
+    "removeCustomCoversBody": "Totes les sèries tornen a la portada del servidor a tots els vostres clients de Mangaka.",
     "customCoversRemoved": "S'han eliminat les portades personalitzades",
     "migrationSourceNotInstalled": "Font no instal·lada",
     "migrationSortCount": "Nombre",
@@ -4504,7 +4504,7 @@
     "updateRemindLater": "Recorda-m'ho més tard",
     "updateIgnore": "Ignora",
     "updateChangelog": "Registre de canvis",
-    "couldNotUpdateTsumiru": "No s'ha pogut actualitzar Tsumiru",
+    "couldNotUpdateTsumiru": "No s'ha pogut actualitzar Mangaka",
     "serverVersionAvailable": "La versió {version} ({channel}) del servidor està disponible per baixar",
     "@serverVersionAvailable": {
         "placeholders": {
@@ -4527,7 +4527,7 @@
             }
         }
     },
-    "tsumiruVersionAvailable": "La versió {version} ({channel}) de Tsumiru està disponible per baixar",
+    "tsumiruVersionAvailable": "La versió {version} ({channel}) de Mangaka està disponible per baixar",
     "@tsumiruVersionAvailable": {
         "placeholders": {
             "version": {
@@ -4538,7 +4538,7 @@
             }
         }
     },
-    "tsumiruVersionUpdated": "Tsumiru s'ha actualitzat a la versió {version} ({channel})",
+    "tsumiruVersionUpdated": "Mangaka s'ha actualitzat a la versió {version} ({channel})",
     "@tsumiruVersionUpdated": {
         "placeholders": {
             "version": {

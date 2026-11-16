@@ -41,7 +41,7 @@ class TsumiruLogo extends ConsumerWidget {
     final List<Color> stops;
     if (theme == AppTheme.custom) {
       final seeded = ColorScheme.fromSeed(
-        seedColor: Color(ref.watch(customThemeColorProvider) ?? 0xFF7C7BFF),
+        seedColor: Color(ref.watch(customThemeColorProvider) ?? 0xFFA855F7),
         brightness: Brightness.dark,
       );
       stops = [seeded.primary, seeded.secondary];

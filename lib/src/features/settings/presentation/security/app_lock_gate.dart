@@ -118,7 +118,7 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
       ref.read(appLockFailedAttemptsProvider.notifier).update(0);
       ref.read(appLockCooldownUntilMsProvider.notifier).update(0);
       ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(true);
-      await ref.read(authCredentialsStoreProvider.notifier).clear();
+      await ref.read(authCredentialsStoreProvider.notifier).clearUiLoginTokens();
     }
 
     final cs = context.theme.colorScheme;

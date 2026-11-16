@@ -25,6 +25,7 @@ import '../../../../widgets/web_selection_area.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
+import '../../domain/extension/top_extensions.dart';
 import '../../domain/extension_store/extension_store_model.dart';
 import 'widgets/add_store_dialog.dart';
 
@@ -45,6 +46,15 @@ class ExtensionStoreScreen extends ConsumerWidget {
       await ref
           .read(extensionStoreRepositoryProvider)
           .removeStore(store.indexUrl);
+      if (!context.mounted) return;
+      // ignore: unused_result
+      ref.refresh(extensionStoreListProvider.future);
+    }, ref.read(toastProvider));
+
+    Future<void> addKeiyoushiStore() => AppUtils.guard(() async {
+      await ref
+          .read(extensionStoreRepositoryProvider)
+          .addStore(kKeiyoushiStoreUrl);
       if (!context.mounted) return;
       // ignore: unused_result
       ref.refresh(extensionStoreListProvider.future);
@@ -94,17 +104,35 @@ class ExtensionStoreScreen extends ConsumerWidget {
                 Expanded(
                   child: storeData.showUiWhenData(context, (data) {
                     final stores = data?.stores ?? const <ExtensionStore>[];
+                    final hasKeiyoushi = stores.any(
+                      (s) => s.indexUrl == kKeiyoushiStoreUrl,
+                    );
                     if (stores.isEmpty) {
                       return Emoticons(
                         title: context.l10n.extensionStoresEmpty,
-                        button: TextButton.icon(
-                          onPressed: () => launchUrlInWeb(
-                            context,
-                            kStoreHelpUrl,
-                            ref.read(toastProvider),
-                          ),
-                          icon: const Icon(FluentIcons.question_circle_24_regular),
-                          label: Text(context.l10n.help),
+                        button: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (canManage)
+                              FilledButton.icon(
+                                onPressed: addKeiyoushiStore,
+                                icon: const Icon(FluentIcons.add_24_regular),
+                                label: const Text(
+                                  'Add Keiyoushi Store (Top 10 Extensions)',
+                                ),
+                              ),
+                            TextButton.icon(
+                              onPressed: () => launchUrlInWeb(
+                                context,
+                                kStoreHelpUrl,
+                                ref.read(toastProvider),
+                              ),
+                              icon: const Icon(
+                                FluentIcons.question_circle_24_regular,
+                              ),
+                              label: Text(context.l10n.help),
+                            ),
+                          ],
                         ),
                       );
                     }
@@ -114,6 +142,24 @@ class ExtensionStoreScreen extends ConsumerWidget {
                         KEdgeInsets.a8.size,
                       ),
                       children: [
+                        if (canManage && !hasKeiyoushi) ...[
+                          Card(
+                            child: ListTile(
+                              leading: const Icon(
+                                FluentIcons.star_24_regular,
+                              ),
+                              title: const Text('Add Keiyoushi Extension Store'),
+                              subtitle: const Text(
+                                'Includes Top 10 popular manga & webtoon extensions',
+                              ),
+                              trailing: FilledButton(
+                                onPressed: addKeiyoushiStore,
+                                child: Text(context.l10n.add),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
                         SettingsGroupCard(
                           children: [
                             for (final store in stores)

@@ -14,6 +14,7 @@ import '../../../../../utils/network/graphql_errors.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../data/extension_store_repository/extension_store_repository.dart';
+import '../../../domain/extension/top_extensions.dart';
 
 /// Duplicate URLs use exact string equality, as required by the server.
 class AddStoreDialog extends HookConsumerWidget {
@@ -61,21 +62,40 @@ class AddStoreDialog extends HookConsumerWidget {
 
     return AlertDialog(
       title: Text(context.l10n.addExtensionStore),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        keyboardType: TextInputType.url,
-        maxLines: 1,
-        onChanged: (value) {
-          url.value = value;
-          if (serverError.value != null) serverError.value = null;
-        },
-        decoration: InputDecoration(
-          labelText: context.l10n.storeIndexUrl,
-          errorText: isDuplicate
-              ? context.l10n.extensionStoreAlreadyExists
-              : serverError.value,
-        ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.url,
+            maxLines: 1,
+            onChanged: (value) {
+              url.value = value;
+              if (serverError.value != null) serverError.value = null;
+            },
+            decoration: InputDecoration(
+              labelText: context.l10n.storeIndexUrl,
+              errorText: isDuplicate
+                  ? context.l10n.extensionStoreAlreadyExists
+                  : serverError.value,
+            ),
+          ),
+          if (!existingUrls.contains(kKeiyoushiStoreUrl)) ...[
+            const SizedBox(height: 12),
+            ActionChip(
+              label: const Text('Use Keiyoushi Store (Top 10 Extensions)'),
+              onPressed: submitting.value
+                  ? null
+                  : () {
+                      controller.text = kKeiyoushiStoreUrl;
+                      url.value = kKeiyoushiStoreUrl;
+                      if (serverError.value != null) serverError.value = null;
+                    },
+            ),
+          ],
+        ],
       ),
       actions: [
         const PopButton(),

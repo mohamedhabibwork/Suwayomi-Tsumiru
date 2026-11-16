@@ -31,7 +31,7 @@ enum DBKeys {
   isTrueBlack(false),
   authType(AuthType.uiLogin),
   basicCredentials(null),
-  authUsername('admin'),
+  authUsername(null),
   // Blocks reuse of credentials left behind by a refused secure-storage delete.
   authCredentialsInvalidated(false),
   readerMode(ReaderMode.singleHorizontalRTL),

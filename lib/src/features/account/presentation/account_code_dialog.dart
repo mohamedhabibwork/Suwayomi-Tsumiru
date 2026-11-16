@@ -89,9 +89,14 @@ class AccountCodeDialog extends HookWidget {
                   labelText: registration
                       ? context.l10n.accountRegistrationCode
                       : context.l10n.accountRecoveryCode,
+                  helperText: registration
+                      ? 'Optional when open registration is enabled'
+                      : null,
                   border: const OutlineInputBorder(),
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
+                validator: registration
+                    ? null
+                    : (value) => value == null || value.trim().isEmpty
                     ? context.l10n.accountCodeRequired
                     : null,
               ),

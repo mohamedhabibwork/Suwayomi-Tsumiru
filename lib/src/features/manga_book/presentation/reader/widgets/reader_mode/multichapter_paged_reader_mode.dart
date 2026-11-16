@@ -97,7 +97,7 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
     final controller = useMemoized(() => PagedReaderController());
     final settings = ref.watch(readerEffectiveSettingsProvider(manga.id));
 
-    final autoAdvanceActive = ref.watch(autoScrollActiveProvider);
+    final autoAdvanceActive = ref.watch(autoScrollEffectiveActiveProvider);
     final autoAdvanceInterval =
         ref.watch(autoAdvanceIntervalSecondsProvider) ??
         DBKeys.autoAdvanceIntervalSeconds.initial as int;
@@ -830,37 +830,48 @@ class MultiChapterPagedReaderMode extends HookConsumerWidget {
           controller.jumpToRaw(visibleChapterPages.pages.length - 1),
       spreadPageIndexes: spreadPageIndexes,
       effectiveReaderMode: wrapperReaderMode,
-      child: PagedReaderViewport(
-        controller: controller,
-        window: window,
-        initialDisplayIndex: initialDisplayIndex,
-        axis: scrollDirection,
-        reverse: reverse,
-        animateTransitions:
-            settings.animatePageTransitions && !context.reduceMotion,
-        pageFit: pageFit,
-        pageSize: pageSize,
-        pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
-        mouseScrollSpeed:
-            ref.watch(readerMouseScrollSpeedKeyProvider) ??
-            DBKeys.readerMouseScrollSpeed.initial,
-        centerMargin: settings.centerMarginType,
-        rotateWide: settings.rotateWidePages,
-        rotateWideInvert: settings.rotateWideInvert,
-        reversePair: reversePair,
-        offsetDoublePages: offsetDoublePages,
-        cropBorders: settings.cropBorders,
-        onPageWide: onPageWide,
-        onChapterPageChanged: onChapterPageChanged,
-        transitionBuilder: transitionBuilder,
-        onIdle: commitPendingIfAny,
-        onReachedStartEdge: onReachedStartEdge,
-        onReachedEndEdge: onReachedEndEdge,
-        pinchEnabled: settings.pagedPinchToZoom,
-        doubleTapToZoom: settings.pagedDoubleTapToZoom,
-        disableZoomIn: settings.disableZoomIn,
-        disableZoomOut: settings.pagedDisableZoomOut,
-        navigateToPan: settings.navigateToPan,
+      child: Listener(
+        onPointerDown: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(true),
+        onPointerUp: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(false),
+        onPointerCancel: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(false),
+        child: PagedReaderViewport(
+          controller: controller,
+          window: window,
+          initialDisplayIndex: initialDisplayIndex,
+          axis: scrollDirection,
+          reverse: reverse,
+          animateTransitions:
+              settings.animatePageTransitions && !context.reduceMotion,
+          pageCurlTransition:
+              (ref.watch(pageCurlTransitionProvider) ?? false) &&
+              !context.reduceMotion,
+          pageFit: pageFit,
+          pageSize: pageSize,
+          pagesAtNaturalSize: settings.imageScaleType.pagesAtNaturalSize,
+          mouseScrollSpeed:
+              ref.watch(readerMouseScrollSpeedKeyProvider) ??
+              DBKeys.readerMouseScrollSpeed.initial,
+          centerMargin: settings.centerMarginType,
+          rotateWide: settings.rotateWidePages,
+          rotateWideInvert: settings.rotateWideInvert,
+          reversePair: reversePair,
+          offsetDoublePages: offsetDoublePages,
+          cropBorders: settings.cropBorders,
+          onPageWide: onPageWide,
+          onChapterPageChanged: onChapterPageChanged,
+          transitionBuilder: transitionBuilder,
+          onIdle: commitPendingIfAny,
+          onReachedStartEdge: onReachedStartEdge,
+          onReachedEndEdge: onReachedEndEdge,
+          pinchEnabled: settings.pagedPinchToZoom,
+          doubleTapToZoom: settings.pagedDoubleTapToZoom,
+          disableZoomIn: settings.disableZoomIn,
+          disableZoomOut: settings.pagedDisableZoomOut,
+          navigateToPan: settings.navigateToPan,
+        ),
       ),
     );
   }

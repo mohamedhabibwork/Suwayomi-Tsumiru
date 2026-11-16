@@ -519,7 +519,7 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
         ref.watch(readerScrollAmountKeyProvider) ??
         DBKeys.readerScrollAmount.initial as ReaderScrollAmount;
 
-    final bool autoScrollActive = ref.watch(autoScrollActiveProvider);
+    final bool autoScrollActive = ref.watch(autoScrollEffectiveActiveProvider);
     final bool smoothAutoScroll =
         ref.watch(smoothAutoScrollProvider) ??
         DBKeys.smoothAutoScroll.initial as bool;
@@ -1582,7 +1582,15 @@ class MultiChapterContinuousReaderMode extends HookConsumerWidget {
             .read(autoScrollIntervalSecondsProvider.notifier)
             .update((cur + 1).clamp(1, 30));
       },
-      child: child,
+      child: Listener(
+        onPointerDown: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(true),
+        onPointerUp: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(false),
+        onPointerCancel: (_) =>
+            ref.read(autoScrollHoldPausedProvider.notifier).setPaused(false),
+        child: child,
+      ),
     );
   }
 }

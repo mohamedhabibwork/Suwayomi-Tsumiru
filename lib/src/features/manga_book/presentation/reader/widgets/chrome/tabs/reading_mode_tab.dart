@@ -7,6 +7,7 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../../../../constants/db_keys.dart';
 import '../../../../../../../constants/enum.dart';
 import '../../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../../utils/motion/reduce_motion.dart';
@@ -16,6 +17,7 @@ import '../../../../../../settings/presentation/reader/widgets/reader_auto_webto
 import '../../../../../../settings/presentation/reader/widgets/reader_mode_tile/reader_mode_tile.dart';
 import '../../../../../../settings/presentation/reader/widgets/reader_padding_slider/reader_padding_slider.dart';
 import '../../../../manga_details/controller/manga_details_controller.dart';
+import '../../../controller/auto_scroll_controller.dart';
 import '../../../controller/auto_webtoon.dart';
 import '../../../controller/reader_mode_adapter.dart';
 import '../../../controller/reader_settings_model.dart';
@@ -263,6 +265,15 @@ class _PagedSection extends ConsumerWidget {
           value: settings.animatePageTransitions,
           onChanged: model.setAnimatePageTransitions,
         ),
+        if (settings.animatePageTransitions)
+          _SubSwitchTile(
+            title: 'Page-Curl Transition',
+            value:
+                ref.watch(pageCurlTransitionProvider) ??
+                (DBKeys.pageCurlTransition.initial as bool),
+            onChanged: (v) =>
+                ref.read(pageCurlTransitionProvider.notifier).update(v),
+          ),
         CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.invertDoublePages),
@@ -397,6 +408,15 @@ class _LongStripSection extends ConsumerWidget {
           value: settings.animatePageTransitions,
           onChanged: model.setAnimatePageTransitions,
         ),
+        if (settings.animatePageTransitions)
+          _SubSwitchTile(
+            title: 'Page-Curl Transition',
+            value:
+                ref.watch(pageCurlTransitionProvider) ??
+                (DBKeys.pageCurlTransition.initial as bool),
+            onChanged: (v) =>
+                ref.read(pageCurlTransitionProvider.notifier).update(v),
+          ),
         CompactSwitchListTile(
           controlAffinity: ListTileControlAffinity.trailing,
           title: Text(context.l10n.doubleTapToZoom),

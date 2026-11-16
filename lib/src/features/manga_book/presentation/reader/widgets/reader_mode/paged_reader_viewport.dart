@@ -117,8 +117,11 @@ class PagedReaderViewport extends StatefulWidget {
     this.onIdle,
     this.onReachedStartEdge,
     this.onReachedEndEdge,
+    this.pageCurlTransition = false,
     this.clock = DateTime.now,
   });
+
+  final bool pageCurlTransition;
 
   /// Injectable wall clock: widget-test timers advance without changing DateTime.now.
   final DateTime Function() clock;
@@ -1254,6 +1257,11 @@ class _PagedReaderViewportState extends State<PagedReaderViewport>
                     _PositionedDisplayEntry(
                       axis: widget.axis,
                       offset: _entryOffset(index),
+                      axisExtent: _axisExtent,
+                      pageCurl:
+                          widget.pageCurlTransition &&
+                          widget.animateTransitions &&
+                          widget.axis == Axis.horizontal,
                       child: _buildDisplayEntry(index),
                     ),
                 ],
@@ -1387,11 +1395,15 @@ class _PositionedDisplayEntry extends StatelessWidget {
   const _PositionedDisplayEntry({
     required this.axis,
     required this.offset,
+    required this.axisExtent,
+    required this.pageCurl,
     required this.child,
   });
 
   final Axis axis;
   final double offset;
+  final double axisExtent;
+  final bool pageCurl;
   final Widget child;
 
   @override
@@ -1399,7 +1411,46 @@ class _PositionedDisplayEntry extends StatelessWidget {
     final translation = axis == Axis.horizontal
         ? Offset(offset, 0)
         : Offset(0, offset);
-    return Transform.translate(offset: translation, child: child);
+    if (!pageCurl || axis != Axis.horizontal || axisExtent <= 0) {
+      return Transform.translate(offset: translation, child: child);
+    }
+    final progress = (offset / axisExtent).clamp(-1.0, 1.0);
+    if (progress.abs() < 0.001) {
+      return Transform.translate(offset: translation, child: child);
+    }
+    final angle = -progress * (math.pi / 3.2);
+    final shadowOpacity = (progress.abs() * 0.45).clamp(0.0, 0.45);
+    return Transform(
+      alignment: progress < 0 ? Alignment.centerLeft : Alignment.centerRight,
+      transform: Matrix4.identity()
+        ..setEntry(3, 2, 0.0012)
+        ..translateByDouble(offset * 0.35, 0.0, 0.0, 1.0)
+        ..rotateY(angle),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          child,
+          IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: progress < 0
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  end: progress < 0
+                      ? Alignment.centerLeft
+                      : Alignment.centerRight,
+                  colors: [
+                    Colors.black.withValues(alpha: shadowOpacity),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -13,12 +13,15 @@ import '../../../../../../constants/app_sizes.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../../utils/misc/toast/toast.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/brand.dart';
 import '../../../../../offline/presentation/offline_save_button.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_paged_prefs/reader_paged_prefs.dart';
 import '../../../../../settings/presentation/reader/widgets/reader_webtoon_prefs/reader_webtoon_prefs.dart';
+import '../../../../data/manga_book/manga_book_repository.dart';
 import '../../../../domain/chapter/chapter_model.dart';
+import '../../../../domain/chapter_batch/chapter_batch_model.dart';
 import '../../../../domain/chapter_page/chapter_page_model.dart';
 import '../../../../widgets/download_status_icon.dart';
 import '../../../manga_details/controller/manga_details_controller.dart';
@@ -225,6 +228,92 @@ class ReaderBottomControls extends ConsumerWidget {
                       tooltip: context.l10n.settings,
                       onPressed: onOpenSettings,
                       icon: const Icon(FluentIcons.settings_24_regular),
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'Quick Actions',
+                      icon: const Icon(FluentIcons.flash_24_regular),
+                      onSelected: (action) async {
+                        switch (action) {
+                          case 'mark_prev_read':
+                            final prevNext = ref.read(
+                              getNextAndPreviousChaptersProvider(
+                                mangaId: chapter.mangaId,
+                                chapterId: chapter.id,
+                                readerScanlatorGroup: readerScanlatorGroup,
+                              ),
+                            );
+                            final prev = prevNext?.second;
+                            if (prev == null) {
+                              ref
+                                  .read(toastProvider)
+                                  ?.show('No previous chapter found');
+                              return;
+                            }
+                            await AsyncValue.guard(
+                              () => ref
+                                  .read(mangaBookRepositoryProvider)
+                                  .modifyBulkChapters(
+                                    ChapterBatch(
+                                      ids: [prev.id],
+                                      patch: ChapterChange(isRead: true),
+                                    ),
+                                  ),
+                            );
+                            ref.invalidate(
+                              mangaChapterListProvider(
+                                mangaId: chapter.mangaId,
+                              ),
+                            );
+                            ref
+                                .read(toastProvider)
+                                ?.show('Marked previous chapter as read');
+                          case 'delete_download':
+                            await AsyncValue.guard(
+                              () => ref
+                                  .read(mangaBookRepositoryProvider)
+                                  .deleteChapters([chapter.id]),
+                            );
+                            ref.invalidate(
+                              mangaChapterListProvider(
+                                mangaId: chapter.mangaId,
+                              ),
+                            );
+                            ref
+                                .read(toastProvider)
+                                ?.show('Deleted chapter download');
+                          case 'close_reader':
+                            await Navigator.of(context).maybePop();
+                        }
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(
+                          value: 'mark_prev_read',
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(FluentIcons.checkmark_circle_24_regular),
+                            title: Text('Mark Previous Chapter Read'),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete_download',
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(FluentIcons.delete_24_regular),
+                            title: Text('Delete Chapter Download'),
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'close_reader',
+                          child: ListTile(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(FluentIcons.dismiss_24_regular),
+                            title: Text('Close Reader'),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

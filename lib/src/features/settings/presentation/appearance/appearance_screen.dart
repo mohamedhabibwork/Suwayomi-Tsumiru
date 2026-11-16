@@ -8,7 +8,10 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../constants/app_theme.dart';
+import '../../../../constants/db_keys.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../search/settings_search_registry.dart';
@@ -21,6 +24,36 @@ import 'widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
 import 'widgets/is_true_black/is_true_black_tile.dart';
 import 'widgets/manga_thumbnail_backdrop/manga_thumbnail_backdrop_tile.dart';
 import 'widgets/show_recommendations/show_recommendations_tile.dart';
+
+class HideBottomTabLabelsNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.hideBottomTabLabels);
+}
+
+final hideBottomTabLabelsProvider =
+    NotifierProvider<HideBottomTabLabelsNotifier, bool?>(
+  HideBottomTabLabelsNotifier.new,
+);
+
+class HideBottomTabLabelsTile extends ConsumerWidget {
+  const HideBottomTabLabelsTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hideLabels =
+        ref.watch(hideBottomTabLabelsProvider) ??
+        (DBKeys.hideBottomTabLabels.initial as bool);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('Hide Bottom Tab Labels'),
+      subtitle: const Text('Show icons only on the bottom navigation bar'),
+      value: hideLabels,
+      onChanged: (v) =>
+          ref.read(hideBottomTabLabelsProvider.notifier).update(v),
+    );
+  }
+}
 
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
@@ -79,6 +112,10 @@ class AppearanceScreen extends ConsumerWidget {
                     SettingsHighlightTarget(
                       id: 'mangaGridSize',
                       child: GridCoverWidthSlider(),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'hideBottomTabLabels',
+                      child: HideBottomTabLabelsTile(),
                     ),
                   ],
                 ),

@@ -196,7 +196,7 @@ class MigrationBulkConfigScreen extends HookConsumerWidget {
       $extra: MigrationBulkRunData(
         mangaIds: mangaIds,
         targetSourceIds: targetSourceIds,
-        options: config.toOption(deleteSource: true),
+        options: config.toOption(deleteSource: !config.keepOriginal),
         hideUnmatched: config.hideUnmatched,
         hideWithoutUpdates: config.hideWithoutUpdates,
         extraSearchQuery: extraSearchQuery,

@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../constants/navigation_bar_data.dart';
 import '../../features/browse_center/presentation/extension/controller/extension_update_badge.dart';
 import '../../features/offline/data/offline_nav_status.dart';
+import '../../features/settings/presentation/appearance/appearance_screen.dart';
 import 'nav_badges.dart';
 import 'nav_motion_icon.dart';
 
@@ -43,10 +44,14 @@ class SmallScreenNavigationBar extends ConsumerWidget {
     final downloadsPaused = ref.watch(downloadsPausedBadgeProvider);
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
+    final hideLabels = ref.watch(hideBottomTabLabelsProvider) ?? false;
     final navList = NavigationBarData.getNavList(context);
     return NavigationBar(
       selectedIndex: selectedIndex,
       onDestinationSelected: onDestinationSelected,
+      labelBehavior: hideLabels
+          ? NavigationDestinationLabelBehavior.alwaysHide
+          : NavigationDestinationLabelBehavior.alwaysShow,
       destinations: [
         for (var i = 0; i < navList.length; i++)
           getNavigationDestination(

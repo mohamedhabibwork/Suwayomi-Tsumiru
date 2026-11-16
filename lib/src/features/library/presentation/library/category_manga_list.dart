@@ -44,8 +44,10 @@ import '../../../offline/presentation/keep_rule_picker.dart';
 import '../../../offline/presentation/offline_action_confirmations.dart';
 import '../../../offline/presentation/offline_view_loading.dart';
 import '../../../tracking/domain/track_progress_gate.dart';
+import '../../../tracking/presentation/hub/track_sheet.dart';
 import 'controller/library_controller.dart';
 import 'controller/library_manga_list.dart';
+import 'widgets/bulk_tracking_dialog.dart';
 import 'widgets/edit_mangas_category_dialog.dart';
 import 'widgets/library_manga_grid_view.dart';
 
@@ -486,6 +488,27 @@ class CategoryMangaList extends HookConsumerWidget {
                       selection.value = const {};
                       startMigration(context, mangaIds: ids);
                     },
+                    onTrack: () async {
+                      final selected = items
+                          .where((m) => selection.value.contains(m.id))
+                          .toList();
+                      if (selected.isEmpty) return;
+                      selection.value = const {};
+                      if (selected.length == 1) {
+                        await showTrackSheet(
+                          context,
+                          selected.first.id,
+                          mangaTitle: selected.first.title,
+                        );
+                      } else {
+                        await showDialog<void>(
+                          context: context,
+                          builder: (_) => BulkTrackingDialog(mangas: selected),
+                          animationStyle: context.motionStyle,
+                        );
+                      }
+                      refresh();
+                    },
                   ),
                 ),
             ],
@@ -508,6 +531,7 @@ class _SelectionBar extends StatelessWidget {
     required this.onDownloadToServer,
     required this.onEditCategories,
     required this.onMigrate,
+    required this.onTrack,
   });
 
   final int count;
@@ -519,6 +543,7 @@ class _SelectionBar extends StatelessWidget {
   final ValueChanged<DownloadPreset>? onDownloadToServer;
   final VoidCallback onEditCategories;
   final VoidCallback onMigrate;
+  final VoidCallback onTrack;
 
   PopupMenuItem<VoidCallback> _moreItem(
     IconData icon,
@@ -569,6 +594,11 @@ class _SelectionBar extends StatelessWidget {
               FluentIcons.arrow_swap_24_regular,
               context.l10n.bulkMigrationTitle,
               onMigrate,
+            ),
+            _moreItem(
+              FluentIcons.arrow_sync_24_regular,
+              'Track selected',
+              onTrack,
             ),
           ],
           popUpAnimationStyle: context.motionStyle,

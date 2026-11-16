@@ -5,11 +5,25 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../constants/db_keys.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../widgets/compact_switch.dart';
 import '../../domain/migration_models.dart';
+
+class MigrationKeepOriginalNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.migrationKeepOriginal);
+}
+
+final migrationKeepOriginalProvider =
+    NotifierProvider<MigrationKeepOriginalNotifier, bool?>(
+  MigrationKeepOriginalNotifier.new,
+);
 
 class MigrationRunConfig {
   const MigrationRunConfig({
@@ -21,6 +35,7 @@ class MigrationRunConfig {
     required this.migrateDownloads,
     required this.hideUnmatched,
     required this.hideWithoutUpdates,
+    this.keepOriginal = false,
   });
 
   final bool migrateChapters;
@@ -31,6 +46,7 @@ class MigrationRunConfig {
   final bool migrateDownloads;
   final bool hideUnmatched;
   final bool hideWithoutUpdates;
+  final bool keepOriginal;
   static const defaults = MigrationRunConfig(
     migrateChapters: true,
     migrateCategories: true,
@@ -40,6 +56,7 @@ class MigrationRunConfig {
     migrateDownloads: false,
     hideUnmatched: false,
     hideWithoutUpdates: false,
+    keepOriginal: false,
   );
 
   MigrationOption toOption({required bool deleteSource}) => MigrationOption(
@@ -61,6 +78,7 @@ class MigrationRunConfig {
     bool? migrateDownloads,
     bool? hideUnmatched,
     bool? hideWithoutUpdates,
+    bool? keepOriginal,
   }) => MigrationRunConfig(
     migrateChapters: migrateChapters ?? this.migrateChapters,
     migrateCategories: migrateCategories ?? this.migrateCategories,
@@ -71,10 +89,11 @@ class MigrationRunConfig {
     migrateDownloads: migrateDownloads ?? this.migrateDownloads,
     hideUnmatched: hideUnmatched ?? this.hideUnmatched,
     hideWithoutUpdates: hideWithoutUpdates ?? this.hideWithoutUpdates,
+    keepOriginal: keepOriginal ?? this.keepOriginal,
   );
 }
 
-class MigrationConfigSheet extends HookWidget {
+class MigrationConfigSheet extends HookConsumerWidget {
   const MigrationConfigSheet({
     super.key,
     required this.isSingleEntry,
@@ -86,9 +105,14 @@ class MigrationConfigSheet extends HookWidget {
   onStart;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final config = useState(MigrationRunConfig.defaults);
+    final savedKeepOriginal =
+        ref.watch(migrationKeepOriginalProvider) ??
+        (DBKeys.migrationKeepOriginal.initial as bool);
+    final config = useState(
+      MigrationRunConfig.defaults.copyWith(keepOriginal: savedKeepOriginal),
+    );
     final extraSearch = useTextEditingController();
 
     return SafeArea(
@@ -98,7 +122,12 @@ class MigrationConfigSheet extends HookWidget {
           Flexible(
             child: MigrationConfigOptions(
               config: config.value,
-              onChanged: (value) => config.value = value,
+              onChanged: (value) {
+                config.value = value;
+                ref
+                    .read(migrationKeepOriginalProvider.notifier)
+                    .update(value.keepOriginal);
+              },
               extraSearch: extraSearch,
             ),
           ),
@@ -241,6 +270,14 @@ class MigrationConfigOptions extends StatelessWidget {
             subtitle: Text(l10n.migrationHideWithoutUpdatesSubtitle),
             value: config.hideWithoutUpdates,
             onChanged: (v) => onChanged(config.copyWith(hideWithoutUpdates: v)),
+          ),
+          CompactSwitchListTile(
+            title: const Text('Keep original entries in Library'),
+            subtitle: const Text(
+              'Save preference so migrated source entries are not removed by default',
+            ),
+            value: config.keepOriginal,
+            onChanged: (v) => onChanged(config.copyWith(keepOriginal: v)),
           ),
         ],
       ),

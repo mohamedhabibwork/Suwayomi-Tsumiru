@@ -5,16 +5,16 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 enum AppUrls {
-  githubUrl(url: "https://github.com/Suwayomi/Suwayomi-Tsumiru"),
+  githubUrl(url: "https://github.com/mohamedhabibwork/Suwayomi-Tsumiru"),
   latestReleaseUrl(
-    url: "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest",
+    url: "https://github.com/mohamedhabibwork/Suwayomi-Tsumiru/releases/latest",
   ),
   privacyPolicy(url: "https://tsumiru.app/privacy/"),
   tachideskHelp(url: "https://tsumiru.app/docs/guides/getting-started"),
-  whatsNew(url: "https://github.com/Suwayomi/Suwayomi-Tsumiru/releases"),
+  whatsNew(url: "https://github.com/mohamedhabibwork/Suwayomi-Tsumiru/releases"),
   latestReleaseApiUrl(
     url:
-        "https://api.github.com/repos/Suwayomi/Suwayomi-Tsumiru/releases/latest",
+        "https://api.github.com/repos/mohamedhabibwork/Suwayomi-Tsumiru/releases/latest",
   ),
   weblateTranslate(url: "https://hosted.weblate.org/engage/suwayomi/"),
   flareSolverr(

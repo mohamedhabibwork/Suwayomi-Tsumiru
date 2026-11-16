@@ -1,6 +1,6 @@
 # fastforge AppImage config (https://fastforge.dev). Built in CI via
 # `fastforge package --platform linux --targets appimage`.
-display_name: Tsumiru
+display_name: Mangaka
 generic_name: Manga Reader
 icon: assets/icons/launcher/tsumiru_icon_desktop.png
 startup_notify: true

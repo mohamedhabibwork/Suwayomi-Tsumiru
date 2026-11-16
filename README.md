@@ -2,29 +2,29 @@
  <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/icons/dark_icon.png">
   <source media="(prefers-color-scheme: light)" srcset="assets/icons/logo_on_light.png">
-  <img width=120px height=120px src="assets/icons/dark_icon.png" alt="Tsumiru logo"/>
+  <img width=120px height=120px src="assets/icons/dark_icon.png" alt="Mangaka logo"/>
  </picture>
 </p>
 
-<h1 align="center">Tsumiru</h1>
+<h1 align="center">Mangaka</h1>
 
 <div align="center">
 
-[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS%20%7C%20Web-lightgrey)](https://github.com/mohamedhabibwork/Suwayomi-Tsumiru/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/license-MPL--2.0-blue)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/Suwayomi/Suwayomi-Tsumiru?label=download)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Suwayomi/Suwayomi-Tsumiru/total?label=downloads)](https://github.com/Suwayomi/Suwayomi-Tsumiru/releases)
+[![Latest release](https://img.shields.io/github/v/release/mohamedhabibwork/Suwayomi-Tsumiru?label=download)](https://github.com/mohamedhabibwork/Suwayomi-Tsumiru/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/mohamedhabibwork/Suwayomi-Tsumiru/total?label=downloads)](https://github.com/mohamedhabibwork/Suwayomi-Tsumiru/releases)
 [![Translation status](https://hosted.weblate.org/widget/suwayomi/suwayomi-tsumiru/svg-badge.svg)](https://hosted.weblate.org/engage/suwayomi/)
 
 </div>
 
 <p align="center">A manga and webtoon reader for your Suwayomi server</p>
 
-> *Tsumiru* (積みる) takes the 積, "pile up", from *tsundoku* (積ん読), the Japanese habit of buying books faster than you can read them. It swaps the "read" for *miru*, "to look".
+> **Mangaka** — customized fork of [Suwayomi-Tsumiru](https://github.com/Suwayomi/Suwayomi-Tsumiru) pre-configured for `https://manga.firstcallmedical.app`.
 
 ## About
 
-Tsumiru is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so [you'll need a server running first](https://github.com/Suwayomi/Suwayomi-Server#downloading-and-running-the-app). Your library and reading progress are stored on the server, and Tsumiru reads them on Android, iOS, Linux, Windows, macOS or the web. Guides and the FAQ are at [tsumiru.app](https://tsumiru.app).
+Mangaka is a client for [Suwayomi-Server](https://github.com/Suwayomi/Suwayomi-Server), so [you'll need a server running first](https://github.com/Suwayomi/Suwayomi-Server#downloading-and-running-the-app). Your library and reading progress are stored on the server, and Mangaka reads them on Android, iOS, Linux, Windows, macOS or the web.
 
 ## Screenshots
 

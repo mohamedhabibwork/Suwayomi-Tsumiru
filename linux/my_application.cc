@@ -126,7 +126,7 @@ static void my_application_activate(GApplication* application) {
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
 
-  gtk_window_set_title(window, "Tsumiru");
+  gtk_window_set_title(window, "Mangaka");
   GdkScreen* screen = gtk_window_get_screen(window);
   GdkVisual* visual = gdk_screen_get_rgba_visual(screen);
   const bool composited = gdk_screen_is_composited(screen) && visual != nullptr;

@@ -12,7 +12,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../constants/db_keys.dart';
-import '../../features/account/data/account_providers.dart';
+import '../../features/auth/data/auth_credentials_store.dart';
 import '../../global_providers/global_providers.dart';
 import '../extensions/custom_extensions.dart';
 
@@ -24,6 +24,9 @@ const Set<DBKeys> kDeviceScopedDBKeys = {
   DBKeys.serverLanUrl,
   DBKeys.serverPort,
   DBKeys.serverPortToggle,
+  DBKeys.serverRequestTimeout,
+  DBKeys.autoRefreshOnTimeout,
+  DBKeys.autoRefreshRetryDelay,
   DBKeys.onboardingComplete,
   DBKeys.authType,
   DBKeys.basicCredentials,
@@ -51,7 +54,11 @@ String scopedPrefKey(DBKeys key, int? userId) {
 int? _resolveActiveUserId(Ref ref, DBKeys key) {
   if (kDeviceScopedDBKeys.contains(key)) return null;
   try {
-    return ref.watch(currentAccountProvider.select((account) => account?.id));
+    return ref.watch(
+      authCredentialsStoreProvider.select(
+        (state) => state.value?.accountBinding?.userId,
+      ),
+    );
   } on Object {
     return null;
   }
@@ -59,13 +66,15 @@ int? _resolveActiveUserId(Ref ref, DBKeys key) {
 
 /// Call initialize in build; T must be non-nullable and initial may override the key default.
 mixin SharedPreferenceClientMixin<T extends Object> {
-  late final String _key;
-  late final SharedPreferences _client;
-  late final T? _initial;
+  late String _key;
+  late String _fallbackKey;
+  late SharedPreferences _client;
+  T? _initial;
   set state(T? newState);
   T? get state;
-  late final dynamic Function(T)? _toJson;
-  late final T? Function(dynamic)? _fromJson;
+  dynamic Function(T)? _toJson;
+  T? Function(dynamic)? _fromJson;
+  bool _listenerRegistered = false;
   Ref get ref;
 
   void Function() listenSelf(
@@ -80,11 +89,15 @@ mixin SharedPreferenceClientMixin<T extends Object> {
     T? Function(dynamic)? fromJson,
   }) {
     _client = ref.watch(sharedPreferencesProvider);
+    _fallbackKey = key.name;
     _key = scopedPrefKey(key, _resolveActiveUserId(ref, key));
     _initial = initial ?? key.initial;
     _toJson = toJson;
     _fromJson = fromJson;
-    _persistenceRefreshLogic();
+    if (!_listenerRegistered) {
+      _listenerRegistered = true;
+      _persistenceRefreshLogic();
+    }
     return _get ?? _initial;
   }
 
@@ -94,23 +107,25 @@ mixin SharedPreferenceClientMixin<T extends Object> {
       state = operation(state);
 
   T? get _get {
-    final value = _client.get(_key);
-    if (_fromJson != null) {
-      return _fromJson(jsonDecode(value.toString()));
+    final value = _client.get(_key) ?? _client.get(_fallbackKey);
+    final fromJson = _fromJson;
+    if (fromJson != null) {
+      return fromJson(jsonDecode(value.toString()));
     }
     if (value != null && value is List) {
       // SharedPreferences supports only string lists; narrow List<Object> before casting to T.
       return value.map((e) => e.toString()).toList() as T?;
     }
-    return value is T? ? value : _initial;
+    return value is T ? value : _initial;
   }
 
   void _persistenceRefreshLogic() => listenSelf((_, next) => _set(next));
 
   Future<bool> _set(T? value) async {
     if (value == null) return _client.remove(_key);
-    if (_toJson != null) {
-      _client.setString(_key, jsonEncode(_toJson(value)));
+    final toJson = _toJson;
+    if (toJson != null) {
+      _client.setString(_key, jsonEncode(toJson(value)));
     }
     if (value is bool) {
       return await _client.setBool(_key, value);
@@ -130,9 +145,11 @@ mixin SharedPreferenceClientMixin<T extends Object> {
 /// Initialize key, client and enumList in build; initial may override the key default.
 mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   late String _key;
+  late String _fallbackKey;
   late SharedPreferences _client;
   T? _initial;
   late List<T> _enumList;
+  bool _listenerRegistered = false;
   set state(T? newState);
   Ref get ref;
 
@@ -144,10 +161,14 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   /// Overrides the key's default, including inherited values during preference migration.
   T? initialize(DBKeys key, {required List<T> enumList, T? initial}) {
     _client = ref.watch(sharedPreferencesProvider);
+    _fallbackKey = key.name;
     _key = scopedPrefKey(key, _resolveActiveUserId(ref, key));
     _initial = initial ?? key.initial;
     _enumList = enumList;
-    _persistenceRefreshLogic();
+    if (!_listenerRegistered) {
+      _listenerRegistered = true;
+      _persistenceRefreshLogic();
+    }
     return _get;
   }
 
@@ -158,7 +179,8 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
           ? _enumList[value!]
           : _initial;
 
-  T? get _get => _getEnumFromIndex(_client.getInt(_key));
+  T? get _get =>
+      _getEnumFromIndex(_client.getInt(_key) ?? _client.getInt(_fallbackKey));
 
   Future<bool> _set(int? value) {
     if (value == null) return _client.remove(_key);

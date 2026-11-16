@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/tri_state_filter_tile.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../history_controller.dart';
 
 class HistoryFilterSheet extends ConsumerWidget {
@@ -51,6 +52,8 @@ class HistoryFilterSheet extends ConsumerWidget {
             includedLabel: context.l10n.filterOptionInLibrary,
             excludedLabel: context.l10n.filterOptionNotInLibrary,
           ),
+          const Divider(),
+          const ShowNSFWTile(),
         ],
       ),
     );

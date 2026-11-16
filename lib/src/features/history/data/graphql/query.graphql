@@ -10,6 +10,12 @@ fragment HistoryChapterDto on ChapterType {
     thumbnailUrl
     thumbnailUrlLastFetched
     author
+    genre
+    sourceId
+    source {
+      id
+      contentWarning
+    }
     meta {
       key
       value

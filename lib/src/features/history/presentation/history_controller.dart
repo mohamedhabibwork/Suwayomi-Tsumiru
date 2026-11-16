@@ -9,28 +9,46 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../constants/db_keys.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../browse_center/domain/content_rating.dart';
+import '../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../data/history_repository.dart';
 import '../domain/history_group.dart';
 import '../domain/history_item.dart';
 
 part 'history_controller.g.dart';
 
+bool isHistoryItemNsfw(HistoryItemDto item) {
+  final warning = item.manga.source?.contentWarning;
+  if (warning != null && isNsfwFromWarning(warning)) {
+    return true;
+  }
+  if (hasAdultTag(item.manga.genre)) {
+    return true;
+  }
+  return isAdultManga(warning, item.manga.genre);
+}
+
 @riverpod
 class ReadingHistory extends _$ReadingHistory {
   @override
   Future<List<HistoryItemDto>?> build() async {
     final inLibrary = ref.watch(historyFilterInLibraryProvider);
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
     final items = await ref
         .watch(historyRepositoryProvider)
         .getReadingHistory(inLibrary: inLibrary);
     // The provider may be disposed during fetch; keepAlive requires a mounted ref.
     if (ref.mounted) ref.keepAlive();
+    if (!showNsfw) {
+      return items.where((item) => !isHistoryItemNsfw(item)).toList();
+    }
     return items;
   }
 
   Future<void> refresh() async {
     // Retain current items while the pull-to-refresh indicator shows progress.
     final inLibrary = ref.read(historyFilterInLibraryProvider);
+    final showNsfw = ref.read(showNSFWProvider).ifNull(false);
     final result = await AsyncValue.guard(
       () => ref
           .read(historyRepositoryProvider)
@@ -38,7 +56,13 @@ class ReadingHistory extends _$ReadingHistory {
     );
     if (!ref.mounted) return;
     final items = result.asData?.value;
-    if (items != null) state = AsyncData(items);
+    if (items != null) {
+      state = AsyncData(
+        showNsfw
+            ? items
+            : items.where((item) => !isHistoryItemNsfw(item)).toList(),
+      );
+    }
   }
 }
 
@@ -46,18 +70,30 @@ class ReadingHistory extends _$ReadingHistory {
 class MangaReadingHistory extends _$MangaReadingHistory {
   @override
   Future<List<HistoryItemDto>?> build({required int mangaId}) async {
-    return ref
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final items = await ref
         .watch(historyRepositoryProvider)
         .getMangaReadingHistory(mangaId: mangaId);
+    if (!showNsfw && items != null) {
+      return items.where((item) => !isHistoryItemNsfw(item)).toList();
+    }
+    return items;
   }
 
   Future<void> refresh() async {
+    final showNsfw = ref.read(showNSFWProvider).ifNull(false);
     final result = await AsyncValue.guard(
       () => ref
           .read(historyRepositoryProvider)
           .getMangaReadingHistory(mangaId: mangaId),
     );
-    if (ref.mounted) state = result;
+    if (ref.mounted) {
+      state = result.whenData(
+        (items) => !showNsfw && items != null
+            ? items.where((item) => !isHistoryItemNsfw(item)).toList()
+            : items,
+      );
+    }
   }
 }
 
@@ -121,7 +157,11 @@ bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
 
 @riverpod
 List<HistoryGroup> historyGroupedByDate(Ref ref) {
-  final allItems = ref.watch(readingHistoryProvider).value ?? [];
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final rawItems = ref.watch(readingHistoryProvider).value ?? [];
+  final allItems = showNsfw
+      ? rawItems
+      : rawItems.where((item) => !isHistoryItemNsfw(item)).toList();
   final filter = ref.watch(historyFilterProvider);
   final historyItems = filter == kNoHistoryFilter
       ? allItems

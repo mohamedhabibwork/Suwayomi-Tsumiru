@@ -16,6 +16,7 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../library/presentation/library/widgets/desktop_library_panels.dart';
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../domain/source/source_model.dart';
 import '../extension/controller/extension_controller.dart';
 import '../source/controller/source_controller.dart' hide SourceLanguageFilter;
@@ -130,6 +131,8 @@ class BrowseFilterPanel extends ConsumerWidget {
               ),
             ],
           ),
+          const ShowNSFWTile(),
+          const Divider(),
           Text(
             context.l10n.languages,
             style: context.theme.textTheme.titleSmall,

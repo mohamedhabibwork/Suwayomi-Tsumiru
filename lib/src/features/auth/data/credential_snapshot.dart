@@ -95,10 +95,17 @@ class CredentialSnapshot {
         await _clearCredentialInvalidation(prefs);
       }
     }
-    for (final key in [...kCredentialKeys, ...kEndpointKeys]) {
-      if (key == kLegacyPasswordSecureKey) continue;
-      if (invalidated && kCredentialKeys.contains(key)) continue;
-      _values[key] = await readSecureOrAbsent(_storage, key);
+    final keysToRead = [
+      for (final key in [...kCredentialKeys, ...kEndpointKeys])
+        if (key != kLegacyPasswordSecureKey &&
+            !(invalidated && kCredentialKeys.contains(key)))
+          key,
+    ];
+    final loadedValues = await Future.wait(
+      keysToRead.map((key) => readSecureOrAbsent(_storage, key)),
+    );
+    for (var i = 0; i < keysToRead.length; i++) {
+      _values[keysToRead[i]] = loadedValues[i];
     }
     if (!invalidated && keychainRefusedThisRun) {
       final key = switch (prefs.getInt(DBKeys.authType.name)) {

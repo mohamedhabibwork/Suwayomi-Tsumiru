@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../library/presentation/library/widgets/library_filter_segments.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../history_controller.dart';
 
 class HistoryFilterPanel extends ConsumerWidget {
@@ -98,6 +99,8 @@ class HistoryFilterPanel extends ConsumerWidget {
               ),
             ],
           ),
+          const Divider(),
+          const ShowNSFWTile(),
         ],
       ),
     );

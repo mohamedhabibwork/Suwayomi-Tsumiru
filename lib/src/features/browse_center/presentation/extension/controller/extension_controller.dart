@@ -30,7 +30,7 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   final extensionMap = <String, List<Extension>>{};
   final extensionListData = ref.watch(extensionProvider);
   final extensionList = [...?extensionListData.value];
-  final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
   for (final e in extensionList) {
     if (!showNsfw && isNsfwFromWarning(e.contentWarning)) continue;
     if (e.isInstalled.ifNull()) {

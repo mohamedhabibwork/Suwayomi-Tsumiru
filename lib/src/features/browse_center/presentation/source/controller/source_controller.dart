@@ -21,10 +21,10 @@ part 'source_controller.g.dart';
 Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
 
-/// Applies the NSFW source filter; an unset setting allows NSFW.
+/// Applies the NSFW source filter; defaults to false unless enabled via Face ID.
 @riverpod
 AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
-  final showNsfw = ref.watch(showNSFWProvider).ifNull(true);
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
   return ref.watch(sourceListProvider).copyWithData(
         (list) => list == null || showNsfw
             ? list

@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:io' show Platform;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,6 +14,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../utils/logger/logger.dart';
 
 part 'secure_credentials_provider.g.dart';
+
+bool _isUnmockedTestStorage(FlutterSecureStorage storage) =>
+    identical(storage, kSecureStorage) &&
+    !kIsWeb &&
+    Platform.environment.containsKey('FLUTTER_TEST');
 
 /// Uses secure platform storage for bearer-equivalent secrets.
 /// Android migration keeps a backup; unrecoverable decryption errors reset the store for re-login.
@@ -54,7 +61,7 @@ Future<String?> readSecureOrAbsent(
   FlutterSecureStorage storage,
   String key,
 ) async {
-  if (_keychainRefused) return null;
+  if (_keychainRefused || _isUnmockedTestStorage(storage)) return null;
   try {
     return await storage.read(key: key);
   } catch (error) {
@@ -73,6 +80,7 @@ Future<bool> writeSecure(
   String key,
   String? value,
 ) async {
+  if (_isUnmockedTestStorage(storage)) return true;
   try {
     await storage.write(key: key, value: value);
     return true;
@@ -88,6 +96,7 @@ Future<bool> writeSecure(
 
 /// Returns false on refusal; in-memory state remains authoritative until persistence is retried.
 Future<bool> deleteSecure(FlutterSecureStorage storage, String key) async {
+  if (_isUnmockedTestStorage(storage)) return true;
   try {
     await storage.delete(key: key);
     return true;

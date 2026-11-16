@@ -22,6 +22,7 @@ import '../../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../manga_book/domain/manga/graphql/__generated__/fragment.graphql.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
@@ -321,7 +322,10 @@ class CategoryMangaListWithQueryAndFilter
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
-    final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final mangaFilterLewd = showNsfw
+        ? ref.watch(libraryMangaFilterLewdProvider)
+        : false;
     final filterCategories = ref
         .watch(libraryFilterCategoriesProvider)
         .ifNull(false);
@@ -761,7 +765,10 @@ class GroupedMangaListWithQueryAndFilter
     final mangaFilterOffline = ref.watch(libraryMangaFilterOfflineProvider);
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
-    final mangaFilterLewd = ref.watch(libraryMangaFilterLewdProvider);
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final mangaFilterLewd = showNsfw
+        ? ref.watch(libraryMangaFilterLewdProvider)
+        : false;
     final filterCategories = ref
         .watch(libraryFilterCategoriesProvider)
         .ifNull(false);

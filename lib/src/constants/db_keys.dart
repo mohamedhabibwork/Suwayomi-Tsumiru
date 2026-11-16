@@ -44,7 +44,7 @@ enum DBKeys {
   quickSearchToggle(true),
   swipeToggle(true),
   lastPageSwipeEnabled(false),
-  showNSFW(true),
+  showNSFW(false),
   showRecommendations(true),
   recommendsInOverflow(false),
   mangaThumbnailBackdrop(null),

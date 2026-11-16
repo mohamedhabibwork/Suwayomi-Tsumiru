@@ -19,6 +19,12 @@ This project implements all **remaining Tachimanga changelog features (`v4.13`â€
 ## 2. Goals, Non-Goals & Anti-Goals
 
 ### Goals
+0. **Tachimanga Premium Parity (100% Free) & Per-User Customization Isolation**:
+   - **All Tachimanga Premium Features Unlocked for Free**: Ad-free experience, external extension repositories (with 1-tap Keiyoushi & Top 10 extensions), cross-device per-user sync, all 7 trackers (AniList, MAL, Shikimori, Bangumi, MangaBaka, MangaUpdates, Kitsu) + Bulk Tracking, automatic/manual backups, and all advanced appearance/reader/security customizations.
+   - **Per-User Customization Scope (Not Shared Across Users)**:
+     - On `Suwayomi-Server`, library entries (`MangaUserTable`), categories (`CategoryTable`), chapter progress/bookmarks (`ChapterUserTable`), custom covers & manga metadata (`MangaMetaTable`), tracker bindings & OAuth tokens (`TrackRecordTable` / `TrackPreferences`), and global metadata (`GlobalMetaTable`) are already scoped by `user_id`.
+     - On the client (`Suwayomi-Tsumiru`), update `SharedPreferenceClientMixin` and `SharedPreferenceEnumClientMixin` (`lib/src/utils/mixin/shared_preferences_client_mixin.dart`) so all user-level `DBKeys` (themes, custom accent color, OLED true-black mode, reader settings, page-curl, auto-scroll, app lock PIN, content sharing toggle, bottom tab labels, filters, and sort order) are namespaced per logged-in user (`u_${userId}_${key.name}`) instead of shared globally across the device, while keeping server-connection keys (`serverUrl`, `serverExternalUrl`, `serverLanUrl`, `serverPort`, `serverPortToggle`, `authType`, `authUsername`, `basicCredentials`, `onboardingComplete`) device-scoped.
+     - Additionally, sync each user's customization map to their personal `GlobalMetaTable` record (`key: "mangaka_user_prefs"`) on `Suwayomi-Server` so their customizations follow their account across devices without ever affecting other users.
 1. **Security & Privacy (`More -> Security`)**:
    - **Passcode App Lock (`v4.16`)**: Optional 4-digit PIN lock when opening/resuming the app, with configurable lock timeout (Immediate, 1 min, 5 min, 15 min) and exponential cooldown after 3+ failed attempts (5s, 15s, 30s, 60s).
    - **Disable Content Sharing (`v5.3`)**: Toggle under `More -> Security` (`DBKeys.disableContentSharing`) that hides/blocks sharing manga URLs, chapter URLs, covers, and reader page images across the app.

@@ -258,7 +258,17 @@ enum DBKeys {
   colorFilterValue(0),
   colorFilterBlendMode(ColorFilterBlendMode.defaultBlend),
   grayscale(false),
-  invertedColors(false);
+  invertedColors(false),
+  appLockEnabled(false),
+  appLockPin(''),
+  appLockTimeoutSeconds(0),
+  appLockFailedAttempts(0),
+  appLockCooldownUntilMs(0),
+  disableContentSharing(false),
+  pageCurlTransition(false),
+  autoScrollSleepTimerMinutes(0),
+  migrationKeepOriginal(false),
+  hideBottomTabLabels(false);
 
   const DBKeys(this.initial);
 

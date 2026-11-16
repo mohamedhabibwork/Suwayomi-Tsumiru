@@ -12,8 +12,50 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../constants/db_keys.dart';
+import '../../features/account/data/account_providers.dart';
 import '../../global_providers/global_providers.dart';
 import '../extensions/custom_extensions.dart';
+
+/// Device/connection keys that must remain shared across the device rather than
+/// namespaced per signed-in user account.
+const Set<DBKeys> kDeviceScopedDBKeys = {
+  DBKeys.serverUrl,
+  DBKeys.serverExternalUrl,
+  DBKeys.serverLanUrl,
+  DBKeys.serverPort,
+  DBKeys.serverPortToggle,
+  DBKeys.onboardingComplete,
+  DBKeys.authType,
+  DBKeys.basicCredentials,
+  DBKeys.authUsername,
+  DBKeys.authCredentialsInvalidated,
+  DBKeys.offlineCatalogServerId,
+  DBKeys.offlineLastServerId,
+  DBKeys.offlineLastServerAddress,
+  DBKeys.offlineServerMismatchDismissedList,
+  DBKeys.dismissedUpdateVersion,
+  DBKeys.lastSeenServerVersion,
+  DBKeys.webUIVersion,
+  DBKeys.basicAuthDeprecationLastShown,
+};
+
+/// Returns the SharedPreferences storage key for [key], scoped to [userId]
+/// (`u_<userId>_<key.name>`) for all user-customizable preferences.
+String scopedPrefKey(DBKeys key, int? userId) {
+  if (userId == null || userId <= 0 || kDeviceScopedDBKeys.contains(key)) {
+    return key.name;
+  }
+  return 'u_${userId}_${key.name}';
+}
+
+int? _resolveActiveUserId(Ref ref, DBKeys key) {
+  if (kDeviceScopedDBKeys.contains(key)) return null;
+  try {
+    return ref.watch(currentAccountProvider.select((account) => account?.id));
+  } on Object {
+    return null;
+  }
+}
 
 /// Call initialize in build; T must be non-nullable and initial may override the key default.
 mixin SharedPreferenceClientMixin<T extends Object> {
@@ -38,7 +80,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
     T? Function(dynamic)? fromJson,
   }) {
     _client = ref.watch(sharedPreferencesProvider);
-    _key = key.name;
+    _key = scopedPrefKey(key, _resolveActiveUserId(ref, key));
     _initial = initial ?? key.initial;
     _toJson = toJson;
     _fromJson = fromJson;
@@ -102,7 +144,7 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   /// Overrides the key's default, including inherited values during preference migration.
   T? initialize(DBKeys key, {required List<T> enumList, T? initial}) {
     _client = ref.watch(sharedPreferencesProvider);
-    _key = key.name;
+    _key = scopedPrefKey(key, _resolveActiveUserId(ref, key));
     _initial = initial ?? key.initial;
     _enumList = enumList;
     _persistenceRefreshLogic();

@@ -1,0 +1,133 @@
+# frozen_string_literal: true
+
+default_platform(:ios)
+
+APP_ID = "6828998136"
+BUNDLE_ID = "app.firstcallmedical.manga"
+TEAM_ID = "47S9UJ6UZP"
+ROOT_DIR = File.expand_path("../..", __dir__)
+IPA_PATH = File.join(ROOT_DIR, "build/ios/ipa/Mangaka FC.ipa")
+
+def asc_key_path
+  candidates = [
+    ENV["ASC_KEY_PATH"],
+    File.join(ROOT_DIR, "ios/fastlane/AuthKey_TU55R2U5FS.p8"),
+    "/Users/habib/Downloads/AuthKey_TU55R2U5FS.p8",
+    "/Users/habib/work/docs/trips-enjoy-docs/trips-enjoy-apps/app-store/AuthKey.p8"
+  ].compact
+  found = candidates.find { |p| File.exist?(p) }
+  UI.user_error!("Could not find AuthKey_TU55R2U5FS.p8") unless found
+  found
+end
+
+def asc_api_token
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID", "TU55R2U5FS"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID", "5373cb1a-2b44-440b-aa66-f8bfc90e2096"),
+    key_filepath: asc_key_path,
+    in_house: false
+  )
+end
+
+def connect_api_client!
+  require "spaceship"
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: ENV.fetch("ASC_KEY_ID", "TU55R2U5FS"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID", "5373cb1a-2b44-440b-aa66-f8bfc90e2096"),
+    filepath: asc_key_path
+  )
+  Spaceship::ConnectAPI.token = token
+end
+
+platform :ios do
+  desc "Upload IPA to TestFlight and assign testing groups via App Store Connect API"
+  lane :deploy_testflight do |options|
+    api_key = asc_api_token
+    connect_api_client!
+
+    unless options[:skip_upload] == true || options[:skip_upload].to_s == "true"
+      if File.exist?(IPA_PATH)
+        UI.header("Uploading IPA to TestFlight via Fastlane Pilot...")
+        begin
+          upload_to_testflight(
+            api_key: api_key,
+            app_identifier: BUNDLE_ID,
+            ipa: IPA_PATH,
+            uses_non_exempt_encryption: false,
+            skip_waiting_for_build_processing: true
+          )
+        rescue => e
+          UI.important("Upload notice (build may already be uploaded): #{e.message}")
+        end
+      end
+    end
+
+    app = Spaceship::ConnectAPI::App.find(BUNDLE_ID)
+    UI.user_error!("App '#{BUNDLE_ID}' not found in App Store Connect") unless app
+    UI.success("Found App: #{app.name} (#{app.bundle_id}, ID: #{app.id})")
+
+    groups = app.get_beta_groups
+    if groups.empty?
+      UI.message("No beta groups found; creating 'Internal Testers' group...")
+      created = app.create_beta_group(group_name: "Internal Testers", is_internal_group: true)
+      groups = [created]
+    end
+    UI.message("Beta Groups: #{groups.map { |g| "#{g.name} (id=#{g.id}, internal=#{g.is_internal_group})" }.join(', ')}")
+
+    target_build = nil
+    24.times do |attempt|
+      builds = app.get_builds(sort: "-uploadedDate", includes: "preReleaseVersion")
+      builds.each do |b|
+        ver = b.pre_release_version ? b.pre_release_version.version : "?"
+        UI.message("Build #{ver} (#{b.version}) -> processing_state=#{b.processing_state}, uses_non_exempt_encryption=#{b.uses_non_exempt_encryption.inspect}")
+        if b.processing_state == "VALID" && b.uses_non_exempt_encryption.nil?
+          UI.message("Setting usesNonExemptEncryption=false on build #{b.version}...")
+          Spaceship::ConnectAPI.patch_builds(build_id: b.id, attributes: { usesNonExemptEncryption: false })
+        end
+      end
+
+      latest = builds.first
+      if latest && latest.processing_state == "VALID"
+        target_build = latest
+        break
+      end
+
+      valid_build = builds.find { |b| b.processing_state == "VALID" }
+      if attempt >= 12 && valid_build
+        UI.important("Latest build is still processing; assigning most recent VALID build (#{valid_build.version}) as well...")
+        target_build = valid_build
+        break
+      end
+
+      UI.message("Waiting 15s for latest build (#{latest&.version}) to finish processing (attempt #{attempt + 1}/24)...")
+      sleep(15)
+    end
+
+    builds = app.get_builds(sort: "-uploadedDate")
+    valid_builds = builds.select { |b| b.processing_state == "VALID" }.first(3)
+    UI.user_error!("No VALID builds found to assign to testing groups") if valid_builds.empty?
+
+    valid_builds.each do |build|
+      if build.uses_non_exempt_encryption.nil?
+        Spaceship::ConnectAPI.patch_builds(build_id: build.id, attributes: { usesNonExemptEncryption: false })
+      end
+
+      groups.each do |group|
+        if group.is_internal_group && group.has_access_to_all_builds
+          UI.success("Internal group '#{group.name}' (id=#{group.id}) has automatic distribution (has_access_to_all_builds=true) -> Build #{build.version} is automatically live for '#{group.name}'!")
+        else
+          begin
+            UI.message("Assigning build #{build.version} (id=#{build.id}) to group '#{group.name}' (id=#{group.id})...")
+            Spaceship::ConnectAPI.add_beta_groups_to_build(
+              build_id: build.id,
+              beta_group_ids: [group.id]
+            )
+            UI.success("Assigned build #{build.version} to group '#{group.name}'!")
+          rescue => e
+            UI.important("Group '#{group.name}' assignment note for build #{build.version}: #{e.message}")
+          end
+        end
+      end
+    end
+  end
+end

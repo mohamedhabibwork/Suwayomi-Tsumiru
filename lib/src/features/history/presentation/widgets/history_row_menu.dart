@@ -9,7 +9,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../constants/app_sizes.dart';
-import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
@@ -24,6 +23,7 @@ import '../../../offline/data/offline_repository.dart';
 import '../../../offline/data/offline_types.dart';
 import '../../domain/history_item.dart';
 import '../history_controller.dart';
+import 'history_item_tile.dart';
 
 Future<void> addHistorySeriesToLibrary(
   WidgetRef ref,
@@ -87,11 +87,7 @@ Future<void> showHistoryChapterMenu({
   refresh: () => refreshHistory(ref),
   refocus: refocus,
   historyMenu: true,
-  onViewManga: () async {
-    await MangaRoute(mangaId: item.mangaId).push(context);
-    if (!context.mounted) return;
-    await refreshHistory(ref);
-  },
+  onViewManga: () => navigateHistoryItemToMangaDetails(context, ref, item),
   onAddToLibrary: item.manga.user.inLibrary
       ? null
       : () => addHistorySeriesToLibrary(ref, context, item.mangaId),
@@ -133,8 +129,7 @@ Future<void> showHistoryActionsSheet({
             title: Text(context.l10n.viewManga),
             onTap: () async {
               Navigator.pop(sheetContext);
-              await MangaRoute(mangaId: item.mangaId).push(context);
-              await afterSheet(() => refreshHistory(ref));
+              await navigateHistoryItemToMangaDetails(context, ref, item);
             },
           ),
           if (!inLibrary)

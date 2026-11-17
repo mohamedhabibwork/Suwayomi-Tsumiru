@@ -24,6 +24,7 @@ import '../../library/presentation/library/widgets/desktop_library_toolbar.dart'
 import '../../quick_open/presentation/unified_search/desktop_search_field.dart';
 import '../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../quick_open/presentation/unified_search/unified_search_results.dart';
+import '../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../domain/history_item.dart';
 import 'history_controller.dart';
@@ -80,7 +81,35 @@ class HistoryScreen extends HookConsumerWidget {
     final filterFocus = useMemoized(FocusNode.new);
     useEffect(() => filterFocus.dispose, [filterFocus]);
     final scheme = context.theme.colorScheme;
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+
+    Future<void> toggleNsfwHistory() async {
+      if (showNsfw) {
+        ref.read(showNSFWProvider.notifier).update(false);
+        await ref.read(readingHistoryProvider.notifier).refresh();
+        return;
+      }
+      final ok = await verifyNsfwFaceId(
+        reason: 'Authenticate with Face ID to unlock +18 reading history',
+      );
+      if (!ok || !context.mounted) return;
+      ref.read(showNSFWProvider.notifier).update(true);
+      await ref.read(readingHistoryProvider.notifier).refresh();
+    }
+
     final actions = <Widget>[
+      IconButton(
+        tooltip: showNsfw
+            ? 'Hide +18 History'
+            : 'Unlock +18 History (Face ID)',
+        color: showNsfw ? scheme.error : null,
+        onPressed: toggleNsfwHistory,
+        icon: Icon(
+          showNsfw
+              ? FluentIcons.eye_off_24_regular
+              : FluentIcons.shield_lock_24_regular,
+        ),
+      ),
       if (phone && !persistentBox) ...[
         const PhoneSearchClearFilter(origin: PhoneSearchOrigin.history),
         const PhoneSearchEntry(origin: PhoneSearchOrigin.history),
@@ -312,12 +341,13 @@ class HistoryDropdownRow extends StatelessWidget {
   }
 }
 
-class HistoryEmptyState extends StatelessWidget {
+class HistoryEmptyState extends ConsumerWidget {
   const HistoryEmptyState({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -331,6 +361,22 @@ class HistoryEmptyState extends StatelessWidget {
               style: context.theme.textTheme.headlineSmall,
               textAlign: TextAlign.center,
             ),
+            if (!showNsfw) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final ok = await verifyNsfwFaceId(
+                    reason:
+                        'Authenticate with Face ID to unlock +18 reading history',
+                  );
+                  if (!ok || !context.mounted) return;
+                  ref.read(showNSFWProvider.notifier).update(true);
+                  await ref.read(readingHistoryProvider.notifier).refresh();
+                },
+                icon: const Icon(FluentIcons.shield_lock_24_regular),
+                label: const Text('Unlock +18 History (Face ID)'),
+              ),
+            ],
           ],
         ),
       ),

@@ -29,6 +29,30 @@ void resetNsfwFaceIdSession() {
   _nsfwSessionFaceIdUnlocked = false;
 }
 
+/// Verifies Face ID before unlocking or opening any 18+ / NSFW content or history.
+Future<bool> verifyNsfwFaceId({
+  String reason = 'Authenticate with Face ID to access 18+ / NSFW content',
+}) async {
+  final authOverride = debugNsfwFaceIdAuthOverride;
+  if (authOverride != null) {
+    return authOverride(reason: reason);
+  }
+  if (!kIsWeb && Platform.isIOS) {
+    return authenticateWithFaceId(reason: reason);
+  }
+  return true;
+}
+
+/// Locks and hides all +18 content when the app closes or moves to the background.
+void lockNsfwOnAppClose(WidgetRef ref) {
+  final autoHide = ref.read(autoHideNsfwOnCloseProvider) ?? true;
+  if (!autoHide) return;
+  _nsfwSessionFaceIdUnlocked = false;
+  if (ref.read(showNSFWProvider).ifNull(false)) {
+    ref.read(showNSFWProvider.notifier).update(false);
+  }
+}
+
 @Riverpod(keepAlive: true)
 class ShowNSFW extends _$ShowNSFW with SharedPreferenceClientMixin<bool> {
   @override
@@ -47,6 +71,17 @@ class ShowNSFW extends _$ShowNSFW with SharedPreferenceClientMixin<bool> {
   }
 }
 
+class AutoHideNsfwOnClose extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.autoHideNsfwOnClose);
+}
+
+final autoHideNsfwOnCloseProvider =
+    NotifierProvider<AutoHideNsfwOnClose, bool?>(
+      AutoHideNsfwOnClose.new,
+    );
+
 class ShowNSFWTile extends ConsumerWidget {
   const ShowNSFWTile({super.key});
   @override
@@ -61,24 +96,32 @@ class ShowNSFWTile extends ConsumerWidget {
           ref.read(showNSFWProvider.notifier).update(false);
           return;
         }
-        final authOverride = debugNsfwFaceIdAuthOverride;
-        if (authOverride != null) {
-          final ok = await authOverride(
-            reason: 'Authenticate with Face ID to view 18+ / NSFW content',
-          );
-          if (!ok) return;
-          ref.read(showNSFWProvider.notifier).update(true);
-          return;
-        }
-        if (!kIsWeb && Platform.isIOS) {
-          final ok = await authenticateWithFaceId(
-            reason: 'Authenticate with Face ID to view 18+ / NSFW content',
-          );
-          if (!ok) return;
-        }
+        final ok = await verifyNsfwFaceId(
+          reason: 'Authenticate with Face ID to view 18+ / NSFW content',
+        );
+        if (!ok) return;
         ref.read(showNSFWProvider.notifier).update(true);
       },
       value: isEnabled,
+    );
+  }
+}
+
+class AutoHideNsfwOnCloseTile extends ConsumerWidget {
+  const AutoHideNsfwOnCloseTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isEnabled = ref.watch(autoHideNsfwOnCloseProvider).ifNull(true);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('Auto-Hide 18+ on App Close'),
+      subtitle: const Text(
+        'Automatically hide 18+ sources, extensions & history when closing the app',
+      ),
+      value: isEnabled,
+      onChanged: (value) =>
+          ref.read(autoHideNsfwOnCloseProvider.notifier).update(value),
     );
   }
 }

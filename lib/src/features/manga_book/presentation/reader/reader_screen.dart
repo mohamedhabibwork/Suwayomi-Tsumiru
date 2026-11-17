@@ -15,6 +15,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../history/presentation/history_controller.dart';
@@ -353,7 +354,17 @@ class ReaderScreen extends HookConsumerWidget {
                           ),
                         );
                       }
-                      return switch (autoReaderMode ??
+                      final isVideoEpisode =
+                          (data.source?.name ?? '')
+                              .toLowerCase()
+                              .contains('(video)') ||
+                          data.genre.any(
+                            (g) =>
+                                g.toLowerCase() == 'video' ||
+                                g.toLowerCase() == 'anime',
+                          ) ||
+                          chapterData.name.toLowerCase().startsWith('episode');
+                      final readerBody = switch (autoReaderMode ??
                           data.metaData.readerMode ??
                           defaultReaderMode) {
                         ReaderMode.singleVertical =>
@@ -558,6 +569,32 @@ class ReaderScreen extends HookConsumerWidget {
                           ),
                         },
                       };
+                      if (!isVideoEpisode) return readerBody;
+                      final encodedQuery = Uri.encodeComponent(
+                        '${data.title} ${chapterData.name}',
+                      );
+                      final streamUrl =
+                          'https://hianime.to/search?keyword=$encodedQuery';
+                      return Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          readerBody,
+                          Positioned(
+                            right: 16,
+                            bottom: 24,
+                            child: FloatingActionButton.extended(
+                              heroTag: 'watch_video_episode_${chapterData.id}',
+                              onPressed: () => launchUrlInAppBrowser(
+                                context,
+                                streamUrl,
+                                ref.read(toastProvider),
+                              ),
+                              icon: const Icon(Icons.play_circle_fill_rounded),
+                              label: Text('Watch ${chapterData.name}'),
+                            ),
+                          ),
+                        ],
+                      );
                     },
                     refresh: () => ref.refresh(
                       chapterPagesProvider(chapterId: chapterId).future,

@@ -166,6 +166,11 @@ class ExtensionScreen extends HookConsumerWidget {
                     activeCategory == ResourceCategory.videos)
             ? selectTopVideoExtensions(combinedAll)
             : const <Extension>[];
+        final topNovels = query.isBlank &&
+                (activeCategory == ResourceCategory.all ||
+                    activeCategory == ResourceCategory.novels)
+            ? selectTopNovelExtensions(combinedAll)
+            : const <Extension>[];
         final top10Manga = query.isBlank &&
                 (activeCategory == ResourceCategory.all ||
                     activeCategory == ResourceCategory.manga)
@@ -177,6 +182,7 @@ class ExtensionScreen extends HookConsumerWidget {
             update.isNotBlank ||
             all.isNotBlank ||
             topVideos.isNotEmpty ||
+            topNovels.isNotEmpty ||
             top10Manga.isNotEmpty ||
             extensionMap.values.any((list) => list.isNotBlank);
 
@@ -255,6 +261,28 @@ class ExtensionScreen extends HookConsumerWidget {
                     }
                   },
                   child: const Text('Install Video Defaults'),
+                ),
+              ),
+            if (topNovels.isNotEmpty)
+              ...extensionSet(
+                key: const ValueKey("top_novels"),
+                title: 'Top Novel & Book Extensions',
+                extensions: topNovels,
+                desktop: desktop,
+                headerTrailing: TextButton(
+                  onPressed: () async {
+                    final toInstall = topNovels
+                        .where((e) => !e.isInstalled)
+                        .take(4)
+                        .map((e) => e.pkgName)
+                        .toList();
+                    for (final pkg in toInstall) {
+                      try {
+                        await ref.read(extensionActionsProvider).install(pkg);
+                      } catch (_) {}
+                    }
+                  },
+                  child: const Text('Install Novel Defaults'),
                 ),
               ),
             if (top10Manga.isNotEmpty)

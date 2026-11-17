@@ -17,6 +17,21 @@ import '../domain/history_item.dart';
 
 part 'history_controller.g.dart';
 
+const List<String> _kNsfwHistoryKeywords = [
+  '18+',
+  '+18',
+  'nsfw',
+  'hentai',
+  'pornhub',
+  'xnxx',
+  'xvideos',
+  'hanime',
+  'erotica',
+  'smut',
+  'هنتاي',
+  'سكس',
+];
+
 bool isHistoryItemNsfw(HistoryItemDto item) {
   final warning = item.manga.source?.contentWarning;
   if (warning != null && isNsfwFromWarning(warning)) {
@@ -24,6 +39,13 @@ bool isHistoryItemNsfw(HistoryItemDto item) {
   }
   if (hasAdultTag(item.manga.genre)) {
     return true;
+  }
+  final combinedText = [
+    item.manga.title,
+    item.name,
+  ].join(' ').toLowerCase();
+  for (final kw in _kNsfwHistoryKeywords) {
+    if (combinedText.contains(kw)) return true;
   }
   return isAdultManga(warning, item.manga.genre);
 }

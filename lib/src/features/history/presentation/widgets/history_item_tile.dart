@@ -20,8 +20,10 @@ import '../../../../widgets/server_image.dart';
 import '../../../../widgets/web_route_link.dart';
 import '../../../manga_book/presentation/manga_details/controller/manga_details_controller.dart';
 import '../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../domain/history_item.dart';
 import '../../domain/history_menu_action.dart';
+import '../history_controller.dart';
 import 'history_row_menu.dart';
 
 bool isHistoryChapterCompleted(HistoryItemDto item) {
@@ -40,16 +42,38 @@ void ensureHistoryPreferenceProvidersInitialized(WidgetRef ref, int mangaId) {
   ref.read(mangaPreferredScanlatorsProvider(mangaId: mangaId));
 }
 
-void navigateHistoryItemToReader(
+Future<void> navigateHistoryItemToReader(
   BuildContext context,
   WidgetRef ref,
   HistoryItemDto item,
-) {
+) async {
+  if (isHistoryItemNsfw(item)) {
+    final ok = await verifyNsfwFaceId(
+      reason: 'Authenticate with Face ID to open +18 history item',
+    );
+    if (!ok || !context.mounted) return;
+  }
   if (isHistoryChapterCompleted(item)) {
     navigateToNextHistoryChapterAfterLoading(context, ref, item);
   } else {
     ReaderRoute(mangaId: item.mangaId, chapterId: item.id).push(context);
   }
+}
+
+Future<void> navigateHistoryItemToMangaDetails(
+  BuildContext context,
+  WidgetRef ref,
+  HistoryItemDto item,
+) async {
+  if (isHistoryItemNsfw(item)) {
+    final ok = await verifyNsfwFaceId(
+      reason: 'Authenticate with Face ID to view +18 history details',
+    );
+    if (!ok || !context.mounted) return;
+  }
+  await MangaRoute(mangaId: item.mangaId).push(context);
+  if (!context.mounted) return;
+  await refreshHistory(ref);
 }
 
 Future<void> navigateToNextHistoryChapterAfterLoading(
@@ -197,13 +221,11 @@ class _DesktopTile extends HookConsumerWidget {
                         builder: (context, openMangaInNewTab) => InkWell(
                           onTap: () => WebRouteLink.handleTap(
                             openMangaInNewTab,
-                            () async {
-                              await MangaRoute(
-                                mangaId: item.mangaId,
-                              ).push(context);
-                              if (!context.mounted) return;
-                              await refreshHistory(ref);
-                            },
+                            () => navigateHistoryItemToMangaDetails(
+                              context,
+                              ref,
+                              item,
+                            ),
                           ),
                           child: ServerImage(
                             imageUrl: item.manga.displayCoverUrl,
@@ -524,7 +546,7 @@ class _PhoneTile extends ConsumerWidget {
                   onSelected: (action) {
                     switch (action) {
                       case HistoryMenuAction.viewManga:
-                        MangaRoute(mangaId: item.mangaId).push(context);
+                        navigateHistoryItemToMangaDetails(context, ref, item);
                         break;
                     }
                   },

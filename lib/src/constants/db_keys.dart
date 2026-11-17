@@ -278,7 +278,8 @@ enum DBKeys {
   pageCurlTransition(false),
   autoScrollSleepTimerMinutes(0),
   migrationKeepOriginal(false),
-  hideBottomTabLabels(false);
+  hideBottomTabLabels(false),
+  autoHideNsfwOnClose(true);
 
   const DBKeys(this.initial);
 

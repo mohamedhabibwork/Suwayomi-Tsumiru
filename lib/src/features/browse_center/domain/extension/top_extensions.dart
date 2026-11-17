@@ -51,6 +51,14 @@ const kMangayomiMangaStoreUrl =
 const kMangayomiAnimeStoreUrl =
     'https://raw.githubusercontent.com/m2k3a/mangayomi-extensions/refs/heads/main/anime_index.json';
 
+/// Mangayomi Novel & Book Extensions JSON store.
+const kMangayomiNovelStoreUrl =
+    'https://raw.githubusercontent.com/m2k3a/mangayomi-extensions/refs/heads/main/novel_index.json';
+
+/// LNReader Novel Plugins JSON store (372 Light Novel & Web Novel sources).
+const kLnReaderNovelStoreUrl =
+    'https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/.dist/plugins.min.json';
+
 /// Livid96 Aniyomi Adult Extensions store (18+ / NSFW).
 const kLividAdultVideoStoreUrl =
     'https://raw.githubusercontent.com/Livid96/Aniyomi-Adult-Extensions/main/index.min.json';
@@ -86,6 +94,20 @@ const List<CuratedStoreSpec> kCuratedExtensionStores = [
     subtitle: 'Anime, Donghua & Video streaming extension sources',
     indexUrl: kYuzonoAnimePbStoreUrl,
     category: ResourceCategory.videos,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'LNReader Novel Plugins Store (Default)',
+    subtitle: '370+ Light Novel & Web Novel sources (EN, AR, ES, FR & more)',
+    indexUrl: kLnReaderNovelStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mangayomi Novel & Book Store (Default)',
+    subtitle: 'RoyalRoad, Web Novel Translations & free book sources',
+    indexUrl: kMangayomiNovelStoreUrl,
+    category: ResourceCategory.novels,
     isDefault: true,
   ),
   CuratedStoreSpec(
@@ -156,6 +178,7 @@ enum ResourceCategory {
   all('All Sources'),
   manga('Manga & Webtoons'),
   videos('Videos & Anime'),
+  novels('Novels & Books'),
   comics('Comics'),
   other('Aidoku & Mangayomi');
 
@@ -163,7 +186,14 @@ enum ResourceCategory {
   final String label;
 }
 
+bool isNovelExtension(Extension e) {
+  final pkg = e.pkgName.toLowerCase();
+  final name = e.name.toLowerCase();
+  return pkg.contains('.novelextension.') || name.contains('(novel)');
+}
+
 bool isVideoExtension(Extension e) {
+  if (isNovelExtension(e)) return false;
   final pkg = e.pkgName.toLowerCase();
   final name = e.name.toLowerCase();
   return pkg.contains('.animeextension.') ||
@@ -174,13 +204,15 @@ bool isVideoExtension(Extension e) {
 bool isAidokuOrMangayomiExtension(Extension e) {
   final pkg = e.pkgName.toLowerCase();
   return (pkg.startsWith('aidoku.') || pkg.startsWith('mangayomi.')) &&
-      !isVideoExtension(e);
+      !isVideoExtension(e) &&
+      !isNovelExtension(e);
 }
 
 bool isComicExtension(Extension e) {
   final name = e.name.toLowerCase();
   final pkg = e.pkgName.toLowerCase();
   return !isVideoExtension(e) &&
+      !isNovelExtension(e) &&
       (name.contains('comic') ||
           name.contains('webtoon') ||
           name.contains('tapas') ||
@@ -192,13 +224,26 @@ bool matchesExtensionCategory(Extension e, ResourceCategory category) =>
     switch (category) {
       ResourceCategory.all => true,
       ResourceCategory.videos => isVideoExtension(e),
+      ResourceCategory.novels => isNovelExtension(e),
       ResourceCategory.comics => isComicExtension(e),
       ResourceCategory.other => isAidokuOrMangayomiExtension(e),
       ResourceCategory.manga =>
-        !isVideoExtension(e) && !isAidokuOrMangayomiExtension(e),
+        !isVideoExtension(e) &&
+            !isNovelExtension(e) &&
+            !isAidokuOrMangayomiExtension(e),
     };
 
+bool isNovelSource(SourceDto s) {
+  final name = s.name.toLowerCase();
+  final display = s.displayName.toLowerCase();
+  final pkg = s.$extension.pkgName.toLowerCase();
+  return pkg.contains('.novelextension.') ||
+      name.contains('(novel)') ||
+      display.contains('(novel)');
+}
+
 bool isVideoSource(SourceDto s) {
+  if (isNovelSource(s)) return false;
   final name = s.name.toLowerCase();
   final display = s.displayName.toLowerCase();
   final pkg = s.$extension.pkgName.toLowerCase();
@@ -210,13 +255,15 @@ bool isVideoSource(SourceDto s) {
 bool isAidokuOrMangayomiSource(SourceDto s) {
   final pkg = s.$extension.pkgName.toLowerCase();
   return (pkg.startsWith('aidoku.') || pkg.startsWith('mangayomi.')) &&
-      !isVideoSource(s);
+      !isVideoSource(s) &&
+      !isNovelSource(s);
 }
 
 bool isComicSource(SourceDto s) {
   final name = s.name.toLowerCase();
   final pkg = s.$extension.pkgName.toLowerCase();
   return !isVideoSource(s) &&
+      !isNovelSource(s) &&
       (name.contains('comic') ||
           name.contains('webtoon') ||
           name.contains('tapas') ||
@@ -228,10 +275,13 @@ bool matchesSourceCategory(SourceDto s, ResourceCategory category) =>
     switch (category) {
       ResourceCategory.all => true,
       ResourceCategory.videos => isVideoSource(s),
+      ResourceCategory.novels => isNovelSource(s),
       ResourceCategory.comics => isComicSource(s),
       ResourceCategory.other => isAidokuOrMangayomiSource(s),
       ResourceCategory.manga =>
-        !isVideoSource(s) && !isAidokuOrMangayomiSource(s),
+        !isVideoSource(s) &&
+            !isNovelSource(s) &&
+            !isAidokuOrMangayomiSource(s),
     };
 
 class SelectedMediaResources extends Notifier<List<String>?>
@@ -286,14 +336,33 @@ const List<({String label, List<String> matchTerms})> kTopVideoExtensionSpecs = 
   (label: 'KickAssAnime', matchTerms: ['kickassanime']),
   (label: 'Miruro', matchTerms: ['miruro', 'allanime']),
   (label: 'AnimeKai', matchTerms: ['animekai', 'kaido']),
-  (label: 'Dailymotion', matchTerms: ['dailymotion', ' Donghua']),
+  (label: 'Dailymotion', matchTerms: ['dailymotion', 'donghua']),
+];
+
+/// Curated Top Novel & Book extensions from Mangayomi / LNReader stores.
+const List<({String label, List<String> matchTerms})> kTopNovelExtensionSpecs = [
+  (label: 'RoyalRoad', matchTerms: ['royalroad']),
+  (label: 'Web Novel Translations', matchTerms: ['webnoveltranslations']),
+  (label: 'bookReadFree', matchTerms: ['bookreadfree']),
+  (label: 'LightNovelPub', matchTerms: ['lightnovelpub', 'novelpub']),
+  (label: 'FreeWebNovel', matchTerms: ['freewebnovel']),
+  (label: 'BoxNovel', matchTerms: ['boxnovel']),
+  (label: 'WuxiaWorld', matchTerms: ['wuxiaworld']),
+  (label: 'ScribbleHub', matchTerms: ['scribblehub']),
+  (label: 'ReadLightNovel', matchTerms: ['readlightnovel', 'novelfull']),
+  (label: 'ArNovel', matchTerms: ['arnovel', 'kolnovel']),
 ];
 
 /// Selects up to one matching extension per curated Top 10 entry,
 /// preferring English (`en`) or multi-language (`all`) extensions.
 List<Extension> selectTop10Extensions(Iterable<Extension> extensions) {
   final pool = extensions
-      .where((e) => !isVideoExtension(e) && (e.lang == 'en' || e.lang == 'all'))
+      .where(
+        (e) =>
+            !isVideoExtension(e) &&
+            !isNovelExtension(e) &&
+            (e.lang == 'en' || e.lang == 'all'),
+      )
       .toList();
   return _pickMatchingExtensions(pool, kTop10ExtensionSpecs);
 }
@@ -312,6 +381,28 @@ List<Extension> selectTopVideoExtensions(Iterable<Extension> extensions) {
   if (picked.length >= 6) return picked;
   final seen = {for (final e in picked) e.pkgName};
   for (final ext in (preferred.isNotEmpty ? preferred : videoPool)) {
+    if (seen.add(ext.pkgName)) {
+      picked.add(ext);
+      if (picked.length >= 10) break;
+    }
+  }
+  return picked;
+}
+
+/// Selects top Novel & Book extensions that install as real sources.
+List<Extension> selectTopNovelExtensions(Iterable<Extension> extensions) {
+  final novelPool = extensions.where(isNovelExtension).toList();
+  if (novelPool.isEmpty) return const <Extension>[];
+  final preferred = novelPool
+      .where((e) => e.lang == 'en' || e.lang == 'all' || e.lang == 'ar')
+      .toList();
+  final picked = _pickMatchingExtensions(
+    preferred.isNotEmpty ? preferred : novelPool,
+    kTopNovelExtensionSpecs,
+  );
+  if (picked.length >= 6) return picked;
+  final seen = {for (final e in picked) e.pkgName};
+  for (final ext in (preferred.isNotEmpty ? preferred : novelPool)) {
     if (seen.add(ext.pkgName)) {
       picked.add(ext);
       if (picked.length >= 10) break;

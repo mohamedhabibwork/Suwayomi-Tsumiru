@@ -18,6 +18,7 @@ import '../source/controller/source_controller.dart';
 IconData iconForResourceCategory(ResourceCategory category) =>
     switch (category) {
       ResourceCategory.videos => FluentIcons.video_24_regular,
+      ResourceCategory.novels => FluentIcons.book_letter_24_regular,
       ResourceCategory.comics => FluentIcons.book_open_24_regular,
       ResourceCategory.other => FluentIcons.library_24_regular,
       ResourceCategory.manga => FluentIcons.book_24_regular,
@@ -59,7 +60,7 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
             onPressed: () async {
               final toast = ref.read(toastProvider);
               toast?.show(
-                'Syncing default Manga, Video, Aidoku & Mangayomi stores...',
+                'Syncing default Manga, Video, Novel, Aidoku & Mangayomi stores...',
               );
               for (final preset in kCuratedExtensionStores.where(
                 (s) => s.isDefault && !s.isNsfw,
@@ -79,7 +80,10 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
                 final topVideo = selectTopVideoExtensions(extList)
                     .where((e) => !e.isInstalled)
                     .take(2);
-                for (final ext in [...topManga, ...topVideo]) {
+                final topNovel = selectTopNovelExtensions(extList)
+                    .where((e) => !e.isInstalled)
+                    .take(2);
+                for (final ext in [...topManga, ...topVideo, ...topNovel]) {
                   try {
                     await ref.read(extensionActionsProvider).install(ext.pkgName);
                   } catch (_) {}
@@ -88,7 +92,7 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
               // ignore: unused_result
               ref.refresh(sourceListProvider.future);
               onSelectDefaults?.call();
-              toast?.show('Default Manga & Video sources installed');
+              toast?.show('Default Manga, Video & Novel sources installed');
             },
           ),
         ],

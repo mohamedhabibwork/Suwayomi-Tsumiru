@@ -29,12 +29,21 @@ ReaderMode? sessionAutoReaderMode({
   required ReaderMode? seriesMode,
   required List<String>? genres,
   String? sourceName,
-}) =>
-    enabled &&
-            (seriesMode ?? ReaderMode.defaultReader) ==
-                ReaderMode.defaultReader
-        ? autoReaderModeFor(genres: genres, sourceName: sourceName)
-        : null;
+}) {
+  if ((seriesMode ?? ReaderMode.defaultReader) != ReaderMode.defaultReader) {
+    return null;
+  }
+  final lowerSource = (sourceName ?? '').toLowerCase();
+  final lowerGenres = [for (final g in genres ?? const <String>[]) g.toLowerCase()];
+  if (lowerSource.contains('(novel)') ||
+      lowerSource.contains('(video)') ||
+      lowerGenres.any((g) => g.contains('novel') || g == 'video' || g == 'anime')) {
+    return ReaderMode.continuousVertical;
+  }
+  return enabled
+      ? autoReaderModeFor(genres: genres, sourceName: sourceName)
+      : null;
+}
 
 // Precedence: manga tag wins outright; then webtoon, comic, manhua, manhwa
 // (tag or source name); fallback manga.

@@ -14,6 +14,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../auth/data/auth_credentials_store.dart';
+import '../browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import 'security_settings_provider.dart';
 
 class AppLockGate extends HookConsumerWidget {
@@ -31,7 +32,12 @@ class AppLockGate extends HookConsumerWidget {
 
     useEffect(() {
       final listener = AppLifecycleListener(
-        onPause: () => backgroundedAt.value = DateTime.now(),
+        onPause: () {
+          backgroundedAt.value = DateTime.now();
+          lockNsfwOnAppClose(ref);
+        },
+        onHide: () => lockNsfwOnAppClose(ref),
+        onDetach: () => lockNsfwOnAppClose(ref),
         onResume: () {
           final pausedAt = backgroundedAt.value;
           backgroundedAt.value = null;

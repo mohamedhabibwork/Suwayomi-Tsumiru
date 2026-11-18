@@ -307,7 +307,9 @@ class MangaDetailsScreen extends HookConsumerWidget {
                 icon: const Icon(FluentIcons.tag_24_regular),
                 onPressed: openEditCategories,
               ),
-            if (twoColumn && data?.realUrl != null)
+            if (twoColumn &&
+                data?.realUrl != null &&
+                !(ref.watch(disableContentSharingProvider) ?? false))
               IconButton(
                 tooltip: context.l10n.share,
                 icon: const Icon(FluentIcons.share_24_regular),
@@ -363,7 +365,8 @@ class MangaDetailsScreen extends HookConsumerWidget {
                         label: context.l10n.migrate,
                       ),
                     ),
-                  if (data?.realUrl != null)
+                  if (data?.realUrl != null &&
+                      !(ref.watch(disableContentSharingProvider) ?? false))
                     PopupMenuItem(
                       onTap: () => shareSeries(context, data!),
                       child: ChapterMenuRow(

@@ -644,16 +644,83 @@ class ReaderScreen extends HookConsumerWidget {
                     refresh: () => ref.refresh(
                       chapterPagesProvider(chapterId: chapterId).future,
                     ),
-                    addScaffoldWrapper: true,
+                    wrapper: (body) =>
+                        chapterPagesView.hasError && !chapterPagesView.isLoading
+                        ? Scaffold(
+                            appBar: AppBar(
+                              leading: BackButton(
+                                onPressed: () =>
+                                    exitReaderScreen(context, mangaId),
+                              ),
+                            ),
+                            body: body,
+                          )
+                        : Scaffold(
+                            body: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                body,
+                                Positioned(
+                                  top: MediaQuery.viewPaddingOf(context).top + 8,
+                                  left: 12,
+                                  child: Material(
+                                    color: context
+                                        .theme
+                                        .colorScheme
+                                        .surfaceContainerHighest
+                                        .withValues(alpha: 0.85),
+                                    borderRadius: BorderRadius.circular(24),
+                                    elevation: 2,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(24),
+                                      onTap: () =>
+                                          exitReaderScreen(context, mangaId),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 8,
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.arrow_back_ios_new_rounded,
+                                              size: 16,
+                                              color: context
+                                                  .theme
+                                                  .colorScheme
+                                                  .onSurface,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              context.l10n.back,
+                                              style: context
+                                                  .textTheme
+                                                  .labelMedium
+                                                  ?.copyWith(
+                                                    color: context
+                                                        .theme
+                                                        .colorScheme
+                                                        .onSurface,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),
-                addScaffoldWrapper: true,
               );
             },
             refresh: () => ref.refresh(mangaProvider.future),
             skipLoadingOnReload: true,
-            addScaffoldWrapper: true,
           ),
         ),
       ),

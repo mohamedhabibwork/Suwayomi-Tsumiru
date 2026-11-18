@@ -71,7 +71,6 @@ mixin SharedPreferenceClientMixin<T extends Object> {
   T? get state;
   dynamic Function(T)? _toJson;
   T? Function(dynamic)? _fromJson;
-  bool _listenerRegistered = false;
   Ref get ref;
 
   void Function() listenSelf(
@@ -91,10 +90,7 @@ mixin SharedPreferenceClientMixin<T extends Object> {
     _initial = initial ?? key.initial;
     _toJson = toJson;
     _fromJson = fromJson;
-    if (!_listenerRegistered) {
-      _listenerRegistered = true;
-      _persistenceRefreshLogic();
-    }
+    _persistenceRefreshLogic();
     return _get ?? _initial;
   }
 
@@ -146,7 +142,6 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
   late SharedPreferences _client;
   T? _initial;
   late List<T> _enumList;
-  bool _listenerRegistered = false;
   set state(T? newState);
   Ref get ref;
 
@@ -162,10 +157,7 @@ mixin SharedPreferenceEnumClientMixin<T extends Enum> {
     _key = scopedPrefKey(key, _resolveActiveUserId(ref, key));
     _initial = initial ?? key.initial;
     _enumList = enumList;
-    if (!_listenerRegistered) {
-      _listenerRegistered = true;
-      _persistenceRefreshLogic();
-    }
+    _persistenceRefreshLogic();
     return _get;
   }
 

@@ -71,28 +71,35 @@ class GeneralScreen extends ConsumerWidget {
                         id: 'quickSearch',
                         child: QuickSearchToggleTile(),
                       ),
-                    SwitchListTile(
-                      secondary: const Icon(Icons.screenshot_monitor_rounded),
-                      title: const Text(
-                        'Black Screen on Screenshot & Recording',
+                    SettingsHighlightTarget(
+                      id: 'blockScreenshots',
+                      child: SwitchListTile(
+                        secondary: const Icon(Icons.screenshot_monitor_rounded),
+                        title: const Text(
+                          'Black Screen on Screenshot & Recording',
+                        ),
+                        subtitle: const Text(
+                          'Show a black screen when taking screenshots or recording the screen',
+                        ),
+                        value: ref.watch(blockScreenshotsProvider) ?? true,
+                        onChanged: (v) => ref
+                            .read(blockScreenshotsProvider.notifier)
+                            .update(v),
                       ),
-                      subtitle: const Text(
-                        'Show a black screen when taking screenshots or recording the screen',
-                      ),
-                      value: ref.watch(blockScreenshotsProvider) ?? true,
-                      onChanged: (v) =>
-                          ref.read(blockScreenshotsProvider.notifier).update(v),
                     ),
-                    SwitchListTile(
-                      secondary: const Icon(Icons.hide_image_outlined),
-                      title: const Text('Do Not Allow Saving Images'),
-                      subtitle: const Text(
-                        'Prevent saving or copying manga pages and cover images to device gallery',
+                    SettingsHighlightTarget(
+                      id: 'disableSaveImages',
+                      child: SwitchListTile(
+                        secondary: const Icon(Icons.hide_image_outlined),
+                        title: const Text('Do Not Allow Saving Images'),
+                        subtitle: const Text(
+                          'Prevent saving or copying manga pages and cover images to device gallery',
+                        ),
+                        value: ref.watch(disableSaveImagesProvider) ?? true,
+                        onChanged: (v) => ref
+                            .read(disableSaveImagesProvider.notifier)
+                            .update(v),
                       ),
-                      value: ref.watch(disableSaveImagesProvider) ?? true,
-                      onChanged: (v) => ref
-                          .read(disableSaveImagesProvider.notifier)
-                          .update(v),
                     ),
                   ],
                 ),

@@ -113,19 +113,12 @@ Future<void> showReaderPageActionsSheet({
     ref,
     requests[firstPageIndex]!.fetchUrl,
   );
-  if (isMobile && (ref.read(disableSaveImagesProvider) ?? true)) {
+  final saveImagesDisabled = ref.read(disableSaveImagesProvider) ?? true;
+  final sharingDisabled = ref.read(disableContentSharingProvider) ?? false;
+  if (isMobile && saveImagesDisabled) {
     ref
         .read(toastProvider)
         ?.show('Saving images is disabled in Settings');
-    return Future<void>.value();
-  }
-
-  final saveImagesDisabled = ref.read(disableSaveImagesProvider) ?? true;
-  final sharingDisabled = ref.read(disableContentSharingProvider) ?? false;
-  if (isMobile && saveImagesDisabled && sharingDisabled) {
-    ref
-        .read(toastProvider)
-        ?.show('Saving & sharing images is disabled in Settings');
     return Future<void>.value();
   }
 

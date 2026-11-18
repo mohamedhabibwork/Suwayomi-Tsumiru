@@ -42,12 +42,15 @@ const _shareKey = ValueKey('reader-page-action-share');
 Future<void> _pumpReader(
   WidgetTester tester, {
   required bool longTapOn,
+  bool disableSaveImages = false,
 }) async {
   tester.view.physicalSize = const Size(800, 1600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
 
-  SharedPreferences.setMockInitialValues(const {});
+  SharedPreferences.setMockInitialValues({
+    'disableSaveImages': disableSaveImages,
+  });
   final prefs = await SharedPreferences.getInstance();
 
   await tester.pumpWidget(
@@ -100,5 +103,17 @@ void main() {
     // Sheet with the mobile actions is shown.
     expect(find.byKey(_copyKey), findsOneWidget);
     expect(find.byKey(_shareKey), findsOneWidget);
+  });
+
+  testWidgets('disableSaveImages ON: long-press blocks saving images', (
+    tester,
+  ) async {
+    await _pumpReader(tester, longTapOn: true, disableSaveImages: true);
+
+    await tester.longPress(find.byType(ReaderView));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(_copyKey), findsNothing);
+    expect(find.byKey(_shareKey), findsNothing);
   });
 }

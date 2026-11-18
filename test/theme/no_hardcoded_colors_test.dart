@@ -43,6 +43,10 @@ const _allowlist = <String, String>{
       'overlay over cover art',
   'lib/src/features/settings/presentation/appearance/widgets/is_true_black/is_true_black_tile.dart':
       'the black swatch for the pure-black option',
+  'lib/src/features/settings/presentation/security/app_lock_gate.dart':
+      'pure-black screenshot/recording blackout screen',
+  'lib/src/features/manga_book/presentation/reader/widgets/reader_mode/paged_reader_viewport.dart':
+      'page curl shadow over reader page',
 };
 
 bool _isGenerated(String path) =>

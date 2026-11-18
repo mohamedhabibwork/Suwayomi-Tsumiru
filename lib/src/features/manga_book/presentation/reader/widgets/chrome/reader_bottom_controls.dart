@@ -32,6 +32,7 @@ import '../brand_page_seekbar.dart';
 import '../reader_mode/infinity_continuous/measure_size.dart';
 import 'chapter_nav_buttons.dart';
 import 'chrome_extents.dart';
+import 'reader_chrome.dart';
 
 class ReaderBottomControls extends ConsumerWidget {
   const ReaderBottomControls({
@@ -282,7 +283,7 @@ class ReaderBottomControls extends ConsumerWidget {
                                 .read(toastProvider)
                                 ?.show('Deleted chapter download');
                           case 'close_reader':
-                            await Navigator.of(context).maybePop();
+                            exitReaderScreen(context, chapter.mangaId);
                         }
                       },
                       itemBuilder: (context) => const [

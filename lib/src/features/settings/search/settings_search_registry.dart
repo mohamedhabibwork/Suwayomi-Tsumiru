@@ -81,6 +81,26 @@ List<SettingsSearchEntry> get generalSettingsSearchEntries => [
         const GeneralSettingsRoute(highlight: 'persistentSearchBar').push(c),
     visible: (_, _) => true,
   ),
+  SettingsSearchEntry(
+    id: 'blockScreenshots',
+    title: (_) => 'Black Screen on Screenshot & Recording',
+    subtitle: (_) =>
+        'Show a black screen when taking screenshots or recording the screen',
+    breadcrumb: (l) => l.general,
+    open: (c) =>
+        const GeneralSettingsRoute(highlight: 'blockScreenshots').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'disableSaveImages',
+    title: (_) => 'Do Not Allow Saving Images',
+    subtitle: (_) =>
+        'Prevent saving or copying manga pages and cover images to device gallery',
+    breadcrumb: (l) => l.general,
+    open: (c) =>
+        const GeneralSettingsRoute(highlight: 'disableSaveImages').push(c),
+    visible: (_, _) => true,
+  ),
 ];
 
 List<SettingsSearchEntry> get advancedSettingsSearchEntries => [
@@ -145,6 +165,15 @@ List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
     breadcrumb: (l) => l.appearance,
     open: (c) =>
         const AppearanceSettingsRoute(highlight: 'mangaGridSize').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'hideBottomTabLabels',
+    title: (_) => 'Hide Bottom Tab Labels',
+    subtitle: (_) => 'Show icons only on the bottom navigation bar',
+    breadcrumb: (l) => '${l.appearance} › ${l.display}',
+    open: (c) =>
+        const AppearanceSettingsRoute(highlight: 'hideBottomTabLabels').push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(

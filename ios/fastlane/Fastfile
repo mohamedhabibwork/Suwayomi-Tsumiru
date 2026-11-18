@@ -66,7 +66,7 @@ platform :ios do
     UI.user_error!("App '#{BUNDLE_ID}' not found in App Store Connect") unless app
     UI.success("Found App: #{app.name} (#{app.bundle_id}, ID: #{app.id})")
 
-    groups = app.get_beta_groups
+    groups = app.get_beta_groups(includes: "betaTesters")
     if groups.empty?
       UI.message("No beta groups found; creating 'Internal Testers' group...")
       created = app.create_beta_group(group_name: "Internal Testers", is_internal_group: true)
@@ -129,8 +129,7 @@ platform :ios do
         end
 
         begin
-          g_with_testers = Spaceship::ConnectAPI::BetaGroup.get(beta_group_id: group.id, includes: "betaTesters").first
-          tester_ids = (g_with_testers&.beta_testers || []).map(&:id)
+          tester_ids = (group.beta_testers || []).map(&:id)
           if tester_ids.any?
             Spaceship::ConnectAPI.add_beta_testers_to_build(build_id: build.id, beta_tester_ids: tester_ids)
             UI.success("Assigned #{tester_ids.size} individual beta testers directly to build #{build.version}!")

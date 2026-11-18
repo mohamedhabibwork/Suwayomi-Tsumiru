@@ -4,5 +4,10 @@
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:manga.firstcallmedical.app</string>
+		<string>applinks:manga.firstcallmedical.app</string>
+	</array>
 </dict>
 </plist>

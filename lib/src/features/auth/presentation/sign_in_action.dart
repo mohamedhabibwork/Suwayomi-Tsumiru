@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/services.dart';
 import 'package:graphql/client.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -21,6 +22,7 @@ import '../data/auth_credentials_store.dart';
 import '../data/auth_recovery_target.dart';
 import '../data/auth_state.dart';
 import '../data/secure_credentials_provider.dart';
+import 'face_id_auth_service.dart';
 
 Future<void> performSignIn(
   WidgetRef ref, {
@@ -28,6 +30,7 @@ Future<void> performSignIn(
   required String serverBaseUrl,
   required String username,
   required String password,
+  bool saveToFaceId = true,
 }) {
   resetCredentialWriteFailure();
   return ref.read(backgroundDownloadControllerProvider).changeIdentity(() async {
@@ -74,6 +77,17 @@ Future<void> performSignIn(
     ref.read(authTypeKeyProvider.notifier).update(authType);
     ref.read(authRecoveryTargetProvider.notifier).set(null);
     ref.read(needsReauthProvider.notifier).set(false);
+    if (saveToFaceId &&
+        username.trim().isNotEmpty &&
+        password.isNotEmpty) {
+      await saveFaceIdCredentials(
+        ref.read(secureStorageProvider),
+        serverBaseUrl: serverBaseUrl,
+        username: username.trim(),
+        password: password,
+      );
+    }
+    TextInput.finishAutofillContext(shouldSave: true);
     AppTelemetry.logSignIn(method: authType.name, username: username);
     // Sign-in remains active in memory even when it cannot be saved for next launch.
     if (credentialWriteFailedThisRun) {

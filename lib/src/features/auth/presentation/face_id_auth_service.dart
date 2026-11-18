@@ -106,10 +106,13 @@ Future<({String username, String password})?> readFaceIdCredentials(
   return (username: 'user_$userSuffix', password: password);
 }
 
-/// Authenticates with Face ID, then signs in with stored credentials or auto-generates and registers a new account.
+/// Authenticates with Face ID, then signs in with provided or stored credentials, or auto-generates and registers a new account.
 Future<String> signInOrRegisterWithFaceId(
   WidgetRef ref, {
   String? serverBaseUrl,
+  String? username,
+  String? password,
+  AuthType authType = AuthType.uiLogin,
 }) async {
   final authenticated = await authenticateWithFaceId();
   if (!authenticated) {
@@ -119,6 +122,24 @@ Future<String> signInOrRegisterWithFaceId(
   final base = (serverBaseUrl != null && serverBaseUrl.trim().isNotEmpty)
       ? serverBaseUrl.trim()
       : (ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial);
+
+  // If the user entered a username and password on the landing/login form, sign in with those and save them for Face ID.
+  if (username != null &&
+      username.trim().isNotEmpty &&
+      password != null &&
+      password.isNotEmpty) {
+    final trimmedUser = username.trim();
+    await performSignIn(
+      ref,
+      authType: authType,
+      serverBaseUrl: base,
+      username: trimmedUser,
+      password: password,
+      saveToFaceId: true,
+    );
+    return trimmedUser;
+  }
+
   final saved = await readFaceIdCredentials(storage, serverBaseUrl: base);
   if (saved != null) {
     try {

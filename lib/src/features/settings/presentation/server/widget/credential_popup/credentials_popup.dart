@@ -100,40 +100,48 @@ class CredentialsPopup extends HookConsumerWidget {
       title: Text(context.l10n.credentials),
       content: Form(
         key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: username,
-              validator: (value) =>
-                  value.isBlank ? (context.l10n.errorUserName) : null,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: context.l10n.userName,
-                border: const OutlineInputBorder(),
+        child: AutofillGroup(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: username,
+                validator: (value) =>
+                    value.isBlank ? (context.l10n.errorUserName) : null,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [
+                  AutofillHints.username,
+                  AutofillHints.email,
+                ],
+                decoration: InputDecoration(
+                  hintText: context.l10n.userName,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
-            const Gap(4),
-            TextFormField(
-              controller: password,
-              validator: (value) =>
-                  value.isBlank ? (context.l10n.errorPassword) : null,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => doSave(),
-              decoration: InputDecoration(
-                hintText: context.l10n.password,
-                border: const OutlineInputBorder(),
+              const Gap(4),
+              TextFormField(
+                controller: password,
+                validator: (value) =>
+                    value.isBlank ? (context.l10n.errorPassword) : null,
+                obscureText: true,
+                keyboardType: TextInputType.visiblePassword,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                onFieldSubmitted: (_) => doSave(),
+                decoration: InputDecoration(
+                  hintText: context.l10n.password,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
-            if (error.value != null) ...[
-              const Gap(8),
-              Text(
-                error.value!,
-                style: TextStyle(color: context.theme.colorScheme.error),
-              ),
+              if (error.value != null) ...[
+                const Gap(8),
+                Text(
+                  error.value!,
+                  style: TextStyle(color: context.theme.colorScheme.error),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       actions: [

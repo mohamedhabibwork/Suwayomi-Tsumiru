@@ -273,6 +273,12 @@ class AccountActions {
           address: address,
           username: binding.username,
         );
+        await saveFaceIdCredentials(
+          ref.read(secureStorageProvider),
+          serverBaseUrl: address,
+          username: binding.username,
+          password: newPassword,
+        );
       } on Object {
         await ref
             .read(accountNoticeProvider.notifier)

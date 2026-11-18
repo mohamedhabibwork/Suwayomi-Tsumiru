@@ -32,6 +32,7 @@ import '../../account/presentation/account_code_dialog.dart';
 import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/custom_headers_store.dart';
+import '../../auth/data/secure_credentials_provider.dart';
 import '../../auth/data/ui_login_token_rejected.dart';
 import '../../auth/presentation/face_id_auth_service.dart';
 import '../../auth/presentation/sign_in_action.dart';
@@ -605,7 +606,29 @@ class _ServerStep extends HookConsumerWidget {
     final resolvedUrl = useState<String?>(null);
     final userController = useTextEditingController();
     final passController = useTextEditingController();
+    final saveLoginToFaceId = useState(true);
     final authChoice = useState(onboardingAuthChoices(isWeb: isWeb).first);
+
+    useEffect(() {
+      Future.microtask(() async {
+        final base =
+            resolvedUrl.value ??
+            validServerBaseUrl(urlController.text.trim()) ??
+            DBKeys.serverUrl.initial;
+        final saved = await readFaceIdCredentials(
+          ref.read(secureStorageProvider),
+          serverBaseUrl: base,
+        );
+        if (!context.mounted || saved == null) return;
+        if (userController.text.isEmpty) {
+          userController.text = saved.username;
+        }
+        if (passController.text.isEmpty) {
+          passController.text = saved.password;
+        }
+      });
+      return null;
+    }, const []);
     // A manual auth choice must take precedence over detection.
     final userChangedAuth = useState(false);
     final credsRejected = useState(false);
@@ -747,6 +770,7 @@ class _ServerStep extends HookConsumerWidget {
             serverBaseUrl: base,
             username: user,
             password: pass,
+            saveToFaceId: saveLoginToFaceId.value,
           );
         });
       } catch (e) {
@@ -1197,6 +1221,9 @@ class _ServerStep extends HookConsumerWidget {
                         signedInUser = await signInOrRegisterWithFaceId(
                           ref,
                           serverBaseUrl: base,
+                          username: userController.text,
+                          password: passController.text,
+                          authType: authChoice.value,
                         );
                       });
                       toast?.show('Signed in with Face ID as $signedInUser');
@@ -1338,28 +1365,53 @@ class _ServerStep extends HookConsumerWidget {
               ),
             ),
           const SizedBox(height: 8),
-          TextField(
-            controller: userController,
-            enabled: !busy,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: InputDecoration(
-              labelText: context.l10n.userName,
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(FluentIcons.person_24_regular),
+          AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: userController,
+                  enabled: !busy,
+                  autocorrect: false,
+                  enableSuggestions: true,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [
+                    AutofillHints.username,
+                    AutofillHints.email,
+                  ],
+                  decoration: InputDecoration(
+                    labelText: context.l10n.userName,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(FluentIcons.person_24_regular),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: passController,
+                  enabled: !busy,
+                  obscureText: true,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: InputDecoration(
+                    labelText: context.l10n.password,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(FluentIcons.lock_closed_24_regular),
+                  ),
+                  onSubmitted: (_) => signIn(),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: passController,
-            enabled: !busy,
-            obscureText: true,
-            decoration: InputDecoration(
-              labelText: context.l10n.password,
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(FluentIcons.lock_closed_24_regular),
-            ),
-            onSubmitted: (_) => signIn(),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            dense: true,
+            value: saveLoginToFaceId.value,
+            onChanged: busy
+                ? null
+                : (v) => saveLoginToFaceId.value = v ?? true,
+            title: const Text('Save login for Face ID & Passwords'),
           ),
           if (showAccountCodes)
             Wrap(
@@ -1426,6 +1478,9 @@ class _ServerStep extends HookConsumerWidget {
                         signedInUser = await signInOrRegisterWithFaceId(
                           ref,
                           serverBaseUrl: base,
+                          username: userController.text,
+                          password: passController.text,
+                          authType: authChoice.value,
                         );
                       });
                       toast?.show('Signed in with Face ID as $signedInUser');

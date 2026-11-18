@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:graphql/client.dart';
@@ -35,6 +36,7 @@ class AccountPasswordDialog extends HookWidget {
           currentPassword: currentPassword.text,
           newPassword: password.text,
         );
+        TextInput.finishAutofillContext(shouldSave: true);
         if (context.mounted) Navigator.pop(context);
       } catch (failure) {
         if (!context.mounted) return;
@@ -69,66 +71,83 @@ class AccountPasswordDialog extends HookWidget {
         title: Text(title),
         content: Form(
           key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextFormField(
-                controller: currentPassword,
-                enabled: !busy.value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: context.l10n.accountCurrentPassword,
-                  border: const OutlineInputBorder(),
+          child: AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: currentPassword,
+                  enabled: !busy.value,
+                  obscureText: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.password],
+                  decoration: InputDecoration(
+                    labelText: context.l10n.accountCurrentPassword,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.isEmpty
+                      ? context.l10n.errorPassword
+                      : null,
                 ),
-                validator: (value) => value == null || value.isEmpty
-                    ? context.l10n.errorPassword
-                    : null,
-              ),
-              const Gap(8),
-              TextFormField(
-                controller: password,
-                enabled: !busy.value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: context.l10n.accountNewPassword,
-                  border: const OutlineInputBorder(),
+                const Gap(8),
+                TextFormField(
+                  controller: password,
+                  enabled: !busy.value,
+                  obscureText: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [
+                    AutofillHints.newPassword,
+                    AutofillHints.password,
+                  ],
+                  decoration: InputDecoration(
+                    labelText: context.l10n.accountNewPassword,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.isEmpty
+                      ? context.l10n.errorPassword
+                      : null,
                 ),
-                validator: (value) => value == null || value.isEmpty
-                    ? context.l10n.errorPassword
-                    : null,
-              ),
-              const Gap(8),
-              TextFormField(
-                controller: confirmation,
-                enabled: !busy.value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: context.l10n.accountConfirmPassword,
-                  border: const OutlineInputBorder(),
+                const Gap(8),
+                TextFormField(
+                  controller: confirmation,
+                  enabled: !busy.value,
+                  obscureText: true,
+                  autocorrect: false,
+                  enableSuggestions: false,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [
+                    AutofillHints.newPassword,
+                    AutofillHints.password,
+                  ],
+                  onFieldSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    labelText: context.l10n.accountConfirmPassword,
+                    border: const OutlineInputBorder(),
+                  ),
+                  validator: (value) => value == null || value.isEmpty
+                      ? context.l10n.errorPassword
+                      : value != password.text
+                      ? context.l10n.accountPasswordsDoNotMatch
+                      : null,
                 ),
-                validator: (value) => value == null || value.isEmpty
-                    ? context.l10n.errorPassword
-                    : value != password.text
-                    ? context.l10n.accountPasswordsDoNotMatch
-                    : null,
-              ),
-              const Gap(8),
-              if (error.value != null)
-                SelectableText(
-                  error.value!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              if (busy.value) const LinearProgressIndicator(),
-            ],
+                const Gap(8),
+                if (error.value != null)
+                  SelectableText(
+                    error.value!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                if (busy.value) const LinearProgressIndicator(),
+              ],
+            ),
           ),
         ),
         actions: [

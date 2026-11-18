@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:gap/gap.dart';
 import 'package:graphql/client.dart';
@@ -47,6 +48,7 @@ class AccountCodeDialog extends HookWidget {
           username: registration ? username.text.trim() : null,
           password: password.text,
         );
+        TextInput.finishAutofillContext(shouldSave: true);
         if (context.mounted) Navigator.pop(context);
       } catch (failure) {
         if (!context.mounted) return;
@@ -75,106 +77,125 @@ class AccountCodeDialog extends HookWidget {
         title: Text(title),
         content: Form(
           key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!registration) ...[
+          child: AutofillGroup(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (!registration) ...[
+                  TextFormField(
+                    controller: code,
+                    enabled: !busy.value,
+                    obscureText: false,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.next,
+                    decoration: InputDecoration(
+                      labelText: context.l10n.accountRecoveryCode,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? context.l10n.accountCodeRequired
+                        : null,
+                  ),
+                  const Gap(8),
+                ],
+                if (registration) ...[
+                  TextFormField(
+                    controller: username,
+                    enabled: !busy.value,
+                    obscureText: false,
+                    autocorrect: false,
+                    enableSuggestions: true,
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [
+                      AutofillHints.newUsername,
+                      AutofillHints.username,
+                    ],
+                    decoration: InputDecoration(
+                      labelText: context.l10n.userName,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? context.l10n.errorUserName
+                        : null,
+                  ),
+                  const Gap(8),
+                ],
                 TextFormField(
-                  controller: code,
+                  controller: password,
                   enabled: !busy.value,
-                  obscureText: false,
+                  obscureText: true,
                   autocorrect: false,
                   enableSuggestions: false,
+                  keyboardType: TextInputType.visiblePassword,
                   textInputAction: TextInputAction.next,
+                  autofillHints: const [
+                    AutofillHints.newPassword,
+                    AutofillHints.password,
+                  ],
                   decoration: InputDecoration(
-                    labelText: context.l10n.accountRecoveryCode,
+                    labelText: context.l10n.accountNewPassword,
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? context.l10n.accountCodeRequired
+                  validator: (value) => value == null || value.isEmpty
+                      ? context.l10n.errorPassword
                       : null,
                 ),
                 const Gap(8),
-              ],
-              if (registration) ...[
                 TextFormField(
-                  controller: username,
+                  controller: confirmation,
                   enabled: !busy.value,
-                  obscureText: false,
+                  obscureText: true,
                   autocorrect: false,
                   enableSuggestions: false,
-                  textInputAction: TextInputAction.next,
+                  keyboardType: TextInputType.visiblePassword,
+                  textInputAction: registration
+                      ? TextInputAction.next
+                      : TextInputAction.done,
+                  autofillHints: const [
+                    AutofillHints.newPassword,
+                    AutofillHints.password,
+                  ],
+                  onFieldSubmitted: registration ? null : (_) => submit(),
                   decoration: InputDecoration(
-                    labelText: context.l10n.userName,
+                    labelText: context.l10n.accountConfirmPassword,
                     border: const OutlineInputBorder(),
                   ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? context.l10n.errorUserName
+                  validator: (value) => value == null || value.isEmpty
+                      ? context.l10n.errorPassword
+                      : value != password.text
+                      ? context.l10n.accountPasswordsDoNotMatch
                       : null,
                 ),
-                const Gap(8),
-              ],
-              TextFormField(
-                controller: password,
-                enabled: !busy.value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(
-                  labelText: context.l10n.accountNewPassword,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) => value == null || value.isEmpty
-                    ? context.l10n.errorPassword
-                    : null,
-              ),
-              const Gap(8),
-              TextFormField(
-                controller: confirmation,
-                enabled: !busy.value,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                textInputAction: registration
-                    ? TextInputAction.next
-                    : TextInputAction.done,
-                onFieldSubmitted: registration ? null : (_) => submit(),
-                decoration: InputDecoration(
-                  labelText: context.l10n.accountConfirmPassword,
-                  border: const OutlineInputBorder(),
-                ),
-                validator: (value) => value == null || value.isEmpty
-                    ? context.l10n.errorPassword
-                    : value != password.text
-                    ? context.l10n.accountPasswordsDoNotMatch
-                    : null,
-              ),
-              if (registration) ...[
-                const Gap(8),
-                TextFormField(
-                  controller: code,
-                  enabled: !busy.value,
-                  obscureText: false,
-                  autocorrect: false,
-                  enableSuggestions: false,
-                  textInputAction: TextInputAction.done,
-                  onFieldSubmitted: (_) => submit(),
-                  decoration: InputDecoration(
-                    labelText: context.l10n.accountRegistrationCode,
-                    helperText: 'Optional — leave blank for open registration',
-                    border: const OutlineInputBorder(),
+                if (registration) ...[
+                  const Gap(8),
+                  TextFormField(
+                    controller: code,
+                    enabled: !busy.value,
+                    obscureText: false,
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => submit(),
+                    decoration: InputDecoration(
+                      labelText: context.l10n.accountRegistrationCode,
+                      helperText:
+                          'Optional — leave blank for open registration',
+                      border: const OutlineInputBorder(),
+                    ),
                   ),
-                ),
+                ],
+                const Gap(8),
+                if (error.value != null)
+                  SelectableText(
+                    error.value!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                if (busy.value) const LinearProgressIndicator(),
               ],
-              const Gap(8),
-              if (error.value != null)
-                SelectableText(
-                  error.value!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
-                ),
-              if (busy.value) const LinearProgressIndicator(),
-            ],
+            ),
           ),
         ),
         actions: [

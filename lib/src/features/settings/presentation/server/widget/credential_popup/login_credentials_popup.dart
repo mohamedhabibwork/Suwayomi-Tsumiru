@@ -15,6 +15,7 @@ import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/endpoints.dart';
 import '../../../../../../constants/enum.dart';
 import '../../../../../../features/auth/data/auth_coordinator.dart';
+import '../../../../../../features/auth/data/secure_credentials_provider.dart';
 import '../../../../../../features/auth/presentation/auth_failure_text.dart';
 import '../../../../../../features/auth/presentation/face_id_auth_service.dart';
 import '../../../../../../features/auth/presentation/sign_in_action.dart';
@@ -62,7 +63,22 @@ class LoginCredentialsPopup extends HookConsumerWidget {
       text: ref.read(authUsernameProvider) ?? '',
     );
     final password = useTextEditingController();
+    final saveLoginToFaceId = useState(true);
     final testing = useState(false);
+
+    useEffect(() {
+      Future.microtask(() async {
+        final baseUrl = ref.read(serverUrlProvider) ?? DBKeys.serverUrl.initial;
+        final saved = await readFaceIdCredentials(
+          ref.read(secureStorageProvider),
+          serverBaseUrl: baseUrl,
+        );
+        if (!context.mounted || saved == null) return;
+        if (username.text.isEmpty) username.text = saved.username;
+        if (password.text.isEmpty) password.text = saved.password;
+      });
+      return null;
+    }, const []);
     final testResult = useState<String?>(null);
     final testResultIsError = useState(false);
     final probeBaseUrl = Endpoints.baseApi(
@@ -189,9 +205,10 @@ class LoginCredentialsPopup extends HookConsumerWidget {
         await performSignIn(
           ref,
           authType: authType,
-                serverBaseUrl: resolvedUrl,
-                username: username.text,
-                password: password.text,
+          serverBaseUrl: resolvedUrl,
+          username: username.text,
+          password: password.text,
+          saveToFaceId: saveLoginToFaceId.value,
         );
         if (context.mounted) Navigator.pop(context);
       } catch (e) {
@@ -242,29 +259,54 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                       },
               ),
             if (authType != AuthType.none) ...[
-            TextFormField(
-              controller: username,
-              validator: (v) => v.isBlank ? context.l10n.errorUserName : null,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                hintText: context.l10n.userName,
-                border: const OutlineInputBorder(),
+              AutofillGroup(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      controller: username,
+                      validator: (v) =>
+                          v.isBlank ? context.l10n.errorUserName : null,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [
+                        AutofillHints.username,
+                        AutofillHints.email,
+                      ],
+                      decoration: InputDecoration(
+                        hintText: context.l10n.userName,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                    const Gap(4),
+                    TextFormField(
+                      controller: password,
+                      validator: (v) =>
+                          v.isBlank ? context.l10n.errorPassword : null,
+                      obscureText: true,
+                      keyboardType: TextInputType.visiblePassword,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.password],
+                      onFieldSubmitted: (_) {
+                        if (!testing.value) doSave();
+                      },
+                      decoration: InputDecoration(
+                        hintText: context.l10n.password,
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const Gap(4),
-            TextFormField(
-              controller: password,
-              validator: (v) => v.isBlank ? context.l10n.errorPassword : null,
-              obscureText: true,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) {
-                if (!testing.value) doSave();
-              },
-              decoration: InputDecoration(
-                hintText: context.l10n.password,
-                border: const OutlineInputBorder(),
+              CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                value: saveLoginToFaceId.value,
+                onChanged: testing.value
+                    ? null
+                    : (v) => saveLoginToFaceId.value = v ?? true,
+                title: const Text('Save login for Face ID & Passwords'),
               ),
-            ),
             ],
             const Gap(12),
             Text(
@@ -296,6 +338,9 @@ class LoginCredentialsPopup extends HookConsumerWidget {
                             await signInOrRegisterWithFaceId(
                               ref,
                               serverBaseUrl: resolveBaseUrl(),
+                              username: username.text,
+                              password: password.text,
+                              authType: authType,
                             );
                             if (context.mounted) Navigator.pop(context);
                           } catch (e) {

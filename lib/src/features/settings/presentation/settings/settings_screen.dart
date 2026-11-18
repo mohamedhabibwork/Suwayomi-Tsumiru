@@ -18,6 +18,7 @@ import '../../../account/data/account_providers.dart';
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 import '../library/widgets/persistent_search_bar/persistent_search_bar.dart';
+import '../security/security_settings_dialog.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -86,6 +87,11 @@ class SettingsScreen extends ConsumerWidget {
                       title: context.l10n.notifications,
                       onTap: () =>
                           const NotificationsSettingsRoute().push(context),
+                    ),
+                    SettingsGroupRow(
+                      icon: FluentIcons.shield_lock_24_regular,
+                      title: 'Security & Privacy',
+                      onTap: () => showSecuritySettingsDialog(context),
                     ),
                   ],
                 ),

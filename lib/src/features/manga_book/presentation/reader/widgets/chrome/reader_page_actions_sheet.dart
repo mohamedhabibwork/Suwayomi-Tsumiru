@@ -113,6 +113,21 @@ Future<void> showReaderPageActionsSheet({
     ref,
     requests[firstPageIndex]!.fetchUrl,
   );
+  if (isMobile && (ref.read(disableSaveImagesProvider) ?? true)) {
+    ref
+        .read(toastProvider)
+        ?.show('Saving images is disabled in Settings');
+    return Future<void>.value();
+  }
+
+  final saveImagesDisabled = ref.read(disableSaveImagesProvider) ?? true;
+  final sharingDisabled = ref.read(disableContentSharingProvider) ?? false;
+  if (isMobile && saveImagesDisabled && sharingDisabled) {
+    ref
+        .read(toastProvider)
+        ?.show('Saving & sharing images is disabled in Settings');
+    return Future<void>.value();
+  }
 
   return showModalBottomSheet<void>(
     context: context,
@@ -122,7 +137,7 @@ Future<void> showReaderPageActionsSheet({
     useSafeArea: true,
     builder: (sheetContext) {
       VoidCallback? copyAction(Future<File> Function() resolve) {
-        if (!imageClipboardSupported) return null;
+        if (!imageClipboardSupported || saveImagesDisabled) return null;
         return () async {
           final toast = ref.read(toastProvider);
           final copiedMsg = context.l10n.copiedImage;
@@ -144,10 +159,8 @@ Future<void> showReaderPageActionsSheet({
         };
       }
 
-      final sharingDisabled = ref.read(disableContentSharingProvider) ?? false;
-
       VoidCallback? shareAction(Future<File> Function() resolve) {
-        if (!isMobile || sharingDisabled) return null;
+        if (!isMobile || sharingDisabled || saveImagesDisabled) return null;
         return () async {
           final toast = ref.read(toastProvider);
           final errorMsg = context.l10n.errorSomethingWentWrong;
@@ -165,7 +178,7 @@ Future<void> showReaderPageActionsSheet({
       }
 
       VoidCallback? saveAction(Future<File> Function() resolve) {
-        if (!isMobile) return null;
+        if (!isMobile || saveImagesDisabled) return null;
         return () async {
           final toast = ref.read(toastProvider);
           final savedMsg = context.l10n.savedToGallery;

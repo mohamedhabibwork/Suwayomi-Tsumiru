@@ -124,6 +124,10 @@ Future<void> _saveCover(
   String imageUrl,
   String? coverVersion,
 ) async {
+  if (ref.read(disableSaveImagesProvider) ?? true) {
+    ref.read(toastProvider)?.show('Saving images is disabled in Settings');
+    return;
+  }
   final toast = ref.read(toastProvider);
   final errorMsg = context.l10n.errorSomethingWentWrong;
   final savedMsg = context.l10n.savedToGallery;
@@ -198,31 +202,38 @@ List<Widget> coverShareSaveButtons(
   bool labeled = false,
 }) {
   if (!_isShareSavePlatform()) return const [];
+  final saveDisabled = ref.watch(disableSaveImagesProvider) ?? true;
+  final shareDisabled =
+      saveDisabled || (ref.watch(disableContentSharingProvider) ?? false);
   if (labeled) {
     return [
-      TextButton.icon(
-        onPressed: () => _shareCover(context, ref, imageUrl, coverVersion),
-        icon: const Icon(FluentIcons.share_24_regular, size: 20),
-        label: Text(context.l10n.share),
-      ),
-      TextButton.icon(
-        onPressed: () => _saveCover(context, ref, imageUrl, coverVersion),
-        icon: const Icon(FluentIcons.save_24_regular, size: 20),
-        label: Text(context.l10n.save),
-      ),
+      if (!shareDisabled)
+        TextButton.icon(
+          onPressed: () => _shareCover(context, ref, imageUrl, coverVersion),
+          icon: const Icon(FluentIcons.share_24_regular, size: 20),
+          label: Text(context.l10n.share),
+        ),
+      if (!saveDisabled)
+        TextButton.icon(
+          onPressed: () => _saveCover(context, ref, imageUrl, coverVersion),
+          icon: const Icon(FluentIcons.save_24_regular, size: 20),
+          label: Text(context.l10n.save),
+        ),
     ];
   }
   return [
-    IconButton(
-      tooltip: context.l10n.share,
-      icon: const Icon(FluentIcons.share_24_regular),
-      onPressed: () => _shareCover(context, ref, imageUrl, coverVersion),
-    ),
-    IconButton(
-      tooltip: context.l10n.save,
-      icon: const Icon(FluentIcons.save_24_regular),
-      onPressed: () => _saveCover(context, ref, imageUrl, coverVersion),
-    ),
+    if (!shareDisabled)
+      IconButton(
+        tooltip: context.l10n.share,
+        icon: const Icon(FluentIcons.share_24_regular),
+        onPressed: () => _shareCover(context, ref, imageUrl, coverVersion),
+      ),
+    if (!saveDisabled)
+      IconButton(
+        tooltip: context.l10n.save,
+        icon: const Icon(FluentIcons.save_24_regular),
+        onPressed: () => _saveCover(context, ref, imageUrl, coverVersion),
+      ),
   ];
 }
 

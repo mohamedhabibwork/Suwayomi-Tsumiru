@@ -279,7 +279,9 @@ enum DBKeys {
   autoScrollSleepTimerMinutes(0),
   migrationKeepOriginal(false),
   hideBottomTabLabels(false),
-  autoHideNsfwOnClose(true);
+  autoHideNsfwOnClose(true),
+  blockScreenshots(true),
+  disableSaveImages(true);
 
   const DBKeys(this.initial);
 

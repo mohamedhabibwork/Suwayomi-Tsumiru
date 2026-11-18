@@ -30,6 +30,31 @@ class MainActivity: FlutterAndroidVolumeKeydownActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app.firstcallmedical.manga/security")
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "setScreenshotProtection" -> {
+                        val enabled = call.argument<Boolean>("enabled") ?: true
+                        runOnUiThread {
+                            if (enabled) {
+                                window.setFlags(
+                                    WindowManager.LayoutParams.FLAG_SECURE,
+                                    WindowManager.LayoutParams.FLAG_SECURE
+                                )
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                            }
+                        }
+                        result.success(true)
+                    }
+                    "isScreenCaptured" -> result.success(false)
+                    else -> result.notImplemented()
+                }
+            }
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "tsumiru/image_transcoder")
             .setMethodCallHandler { call, result ->
                 when (call.method) {

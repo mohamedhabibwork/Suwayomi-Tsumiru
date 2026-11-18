@@ -4,10 +4,32 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../utils/mixin/shared_preferences_client_mixin.dart';
+
+const kSecurityChannel = MethodChannel('app.firstcallmedical.manga/security');
+
+Future<void> syncNativeScreenshotProtection(bool enabled) async {
+  try {
+    await kSecurityChannel.invokeMethod<void>('setScreenshotProtection', {
+      'enabled': enabled,
+    });
+  } catch (_) {}
+}
+
+Future<bool> queryNativeScreenCaptured() async {
+  try {
+    final captured = await kSecurityChannel.invokeMethod<bool>(
+      'isScreenCaptured',
+    );
+    return captured ?? false;
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Computes exponential cooldown seconds after consecutive failed PIN attempts.
 /// < 3 attempts: 0s; 3: 5s; 4: 15s; 5: 30s; >= 6: 60s.
@@ -82,6 +104,39 @@ class DisableContentSharingNotifier extends Notifier<bool?>
 final disableContentSharingProvider =
     NotifierProvider<DisableContentSharingNotifier, bool?>(
       DisableContentSharingNotifier.new,
+    );
+
+class BlockScreenshotsNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() {
+    final enabled = initialize(DBKeys.blockScreenshots) ?? true;
+    syncNativeScreenshotProtection(enabled);
+    return enabled;
+  }
+
+  @override
+  void update(bool? value) {
+    final enabled = value ?? true;
+    super.update(enabled);
+    syncNativeScreenshotProtection(enabled);
+  }
+}
+
+final blockScreenshotsProvider =
+    NotifierProvider<BlockScreenshotsNotifier, bool?>(
+      BlockScreenshotsNotifier.new,
+    );
+
+class DisableSaveImagesNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.disableSaveImages) ?? true;
+}
+
+final disableSaveImagesProvider =
+    NotifierProvider<DisableSaveImagesNotifier, bool?>(
+      DisableSaveImagesNotifier.new,
     );
 
 /// Session-scoped unlock flag; starts false when appLockEnabled is true.

@@ -11,9 +11,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/tsumiru_logo.dart';
 import '../../../auth/data/auth_credentials_store.dart';
+import '../../../auth/presentation/face_id_auth_service.dart';
 import '../browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import 'security_settings_provider.dart';
 
@@ -28,39 +31,106 @@ class AppLockGate extends HookConsumerWidget {
     final storedPin = ref.watch(appLockPinProvider) ?? '';
     final unlocked = ref.watch(appLockSessionUnlockedProvider);
     final timeoutSeconds = ref.watch(appLockTimeoutSecondsProvider) ?? 0;
+    final blockScreenshots = ref.watch(blockScreenshotsProvider) ?? true;
+    final screenCaptured = useState(false);
+    final appBackgrounded = useState(false);
     final backgroundedAt = useRef<DateTime?>(null);
 
     useEffect(() {
-      final listener = AppLifecycleListener(
-        onPause: () {
-          backgroundedAt.value = DateTime.now();
-          lockNsfwOnAppClose(ref);
-        },
-        onHide: () => lockNsfwOnAppClose(ref),
-        onDetach: () => lockNsfwOnAppClose(ref),
-        onResume: () {
-          final pausedAt = backgroundedAt.value;
-          backgroundedAt.value = null;
-          if (pausedAt == null) return;
-          final elapsed = DateTime.now().difference(pausedAt).inSeconds;
-          if (elapsed >= timeoutSeconds) {
+      syncNativeScreenshotProtection(blockScreenshots);
+      if (blockScreenshots) {
+        queryNativeScreenCaptured().then((captured) {
+          if (context.mounted) screenCaptured.value = captured;
+        });
+      } else {
+        screenCaptured.value = false;
+      }
+      kSecurityChannel.setMethodCallHandler((call) async {
+        if (call.method == 'onScreenCaptureChanged') {
+          final captured = (call.arguments as Map?)?['captured'] == true;
+          if (context.mounted) screenCaptured.value = captured;
+        } else if (call.method == 'onScreenshotTaken') {
+          AppTelemetry.logEvent('security_screenshot_blocked');
+          if (context.mounted && (ref.read(blockScreenshotsProvider) ?? true)) {
             ref
-                .read(appLockSessionUnlockedProvider.notifier)
-                .setUnlocked(false);
+                .read(toastProvider)
+                ?.show('Screenshots & screen recording are restricted');
           }
-        },
+        }
+      });
+      return null;
+    }, [blockScreenshots]);
+
+    useEffect(() {
+      void handleBackground() {
+        appBackgrounded.value = true;
+        backgroundedAt.value ??= DateTime.now();
+        lockNsfwOnAppClose(ref);
+        if (timeoutSeconds <= 0 &&
+            (ref.read(appLockEnabledProvider) ?? false) &&
+            (ref.read(appLockPinProvider) ?? '').length == 4) {
+          ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(false);
+        }
+      }
+
+      void handleForeground() {
+        appBackgrounded.value = false;
+        if (blockScreenshots) {
+          syncNativeScreenshotProtection(true);
+          queryNativeScreenCaptured().then((captured) {
+            if (context.mounted) screenCaptured.value = captured;
+          });
+        }
+        final pausedAt = backgroundedAt.value;
+        backgroundedAt.value = null;
+        if (pausedAt == null) return;
+        final elapsed = DateTime.now().difference(pausedAt).inSeconds;
+        if (elapsed >= timeoutSeconds) {
+          ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(false);
+        }
+      }
+
+      final listener = AppLifecycleListener(
+        onPause: handleBackground,
+        onHide: handleBackground,
+        onDetach: () => lockNsfwOnAppClose(ref),
+        onShow: handleForeground,
+        onResume: handleForeground,
       );
       return listener.dispose;
-    }, [timeoutSeconds]);
+    }, [timeoutSeconds, blockScreenshots]);
 
     final mustLock = enabled && storedPin.length == 4 && !unlocked;
-    if (!mustLock) return child;
+    final showBlackScreen =
+        blockScreenshots && (screenCaptured.value || appBackgrounded.value);
+    if (!mustLock && !showBlackScreen) return child;
 
     return Stack(
       fit: StackFit.expand,
       children: [
         child,
-        const _PasscodeLockOverlay(),
+        if (mustLock) const _PasscodeLockOverlay(),
+        if (showBlackScreen)
+          const Material(
+            color: Colors.black,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    FluentIcons.shield_lock_24_regular,
+                    color: Colors.white54,
+                    size: 48,
+                  ),
+                  SizedBox(height: 12),
+                  Text(
+                    'Screen Recording & Capture Restricted',
+                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -76,6 +146,7 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
     final cooldownUntilMs = ref.watch(appLockCooldownUntilMsProvider) ?? 0;
     final entered = useState('');
     final nowMs = useState(DateTime.now().millisecondsSinceEpoch);
+    final bioBusy = useState(false);
 
     final remainingCooldown =
         ((cooldownUntilMs - nowMs.value) / 1000).ceil().clamp(0, 3600);
@@ -88,6 +159,25 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
       return timer.cancel;
     }, [cooldownUntilMs, remainingCooldown > 0]);
 
+    Future<void> unlockWithBiometrics() async {
+      if (bioBusy.value || remainingCooldown > 0) return;
+      bioBusy.value = true;
+      try {
+        final ok = await authenticateWithFaceId(
+          reason: 'Authenticate with Face ID to unlock Mangaka FC',
+        );
+        if (!context.mounted) return;
+        if (ok) {
+          ref.read(appLockFailedAttemptsProvider.notifier).update(0);
+          ref.read(appLockCooldownUntilMsProvider.notifier).update(0);
+          ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(true);
+          AppTelemetry.logEvent('app_lock_unlocked', {'method': 'face_id'});
+        }
+      } finally {
+        if (context.mounted) bioBusy.value = false;
+      }
+    }
+
     void onDigit(String digit) {
       if (remainingCooldown > 0 || entered.value.length >= 4) return;
       final next = '${entered.value}$digit';
@@ -97,6 +187,7 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
           ref.read(appLockFailedAttemptsProvider.notifier).update(0);
           ref.read(appLockCooldownUntilMsProvider.notifier).update(0);
           ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(true);
+          AppTelemetry.logEvent('app_lock_unlocked', {'method': 'pin'});
         } else {
           final newFailures = failedAttempts + 1;
           ref.read(appLockFailedAttemptsProvider.notifier).update(newFailures);
@@ -108,6 +199,7 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
             nowMs.value = DateTime.now().millisecondsSinceEpoch;
           }
           entered.value = '';
+          AppTelemetry.logEvent('app_lock_failed', {'attempts': newFailures});
         }
       }
     }
@@ -126,6 +218,17 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
       ref.read(appLockSessionUnlockedProvider.notifier).setUnlocked(true);
       await ref.read(authCredentialsStoreProvider.notifier).clearUiLoginTokens();
     }
+
+    Widget buildKeyRow(List<Widget> children) => Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        children[0],
+        const SizedBox(width: 16),
+        children[1],
+        const SizedBox(width: 16),
+        children[2],
+      ],
+    );
 
     final cs = context.theme.colorScheme;
     return Material(
@@ -173,35 +276,63 @@ class _PasscodeLockOverlay extends HookConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 32),
-                SizedBox(
-                  width: 260,
-                  child: Wrap(
-                    spacing: 16,
-                    runSpacing: 16,
-                    alignment: WrapAlignment.center,
-                    children: [
-                      for (final d in ['1', '2', '3', '4', '5', '6', '7', '8', '9'])
-                        _PinKeyButton(
-                          label: d,
-                          onTap: remainingCooldown > 0 ? null : () => onDigit(d),
-                        ),
-                      const SizedBox(width: 72, height: 64),
-                      _PinKeyButton(
-                        label: '0',
-                        onTap: remainingCooldown > 0 ? null : () => onDigit('0'),
-                      ),
-                      SizedBox(
-                        width: 72,
-                        height: 64,
-                        child: IconButton(
-                          onPressed: onBackspace,
-                          icon: const Icon(FluentIcons.backspace_24_regular),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                buildKeyRow([
+                  for (final d in ['1', '2', '3'])
+                    _PinKeyButton(
+                      label: d,
+                      onTap: remainingCooldown > 0 ? null : () => onDigit(d),
+                    ),
+                ]),
                 const SizedBox(height: 16),
+                buildKeyRow([
+                  for (final d in ['4', '5', '6'])
+                    _PinKeyButton(
+                      label: d,
+                      onTap: remainingCooldown > 0 ? null : () => onDigit(d),
+                    ),
+                ]),
+                const SizedBox(height: 16),
+                buildKeyRow([
+                  for (final d in ['7', '8', '9'])
+                    _PinKeyButton(
+                      label: d,
+                      onTap: remainingCooldown > 0 ? null : () => onDigit(d),
+                    ),
+                ]),
+                const SizedBox(height: 16),
+                buildKeyRow([
+                  SizedBox(
+                    width: 72,
+                    height: 64,
+                    child: IconButton(
+                      tooltip: 'Unlock with Face ID',
+                      onPressed:
+                          remainingCooldown > 0 ? null : unlockWithBiometrics,
+                      icon: const Icon(FluentIcons.person_passkey_24_regular),
+                    ),
+                  ),
+                  _PinKeyButton(
+                    label: '0',
+                    onTap: remainingCooldown > 0 ? null : () => onDigit('0'),
+                  ),
+                  SizedBox(
+                    width: 72,
+                    height: 64,
+                    child: IconButton(
+                      tooltip: 'Backspace',
+                      onPressed: onBackspace,
+                      icon: const Icon(FluentIcons.backspace_24_regular),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: 16),
+                FilledButton.tonalIcon(
+                  onPressed:
+                      remainingCooldown > 0 ? null : unlockWithBiometrics,
+                  icon: const Icon(FluentIcons.person_passkey_24_regular),
+                  label: const Text('Unlock with Face ID'),
+                ),
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: resetViaSignOut,
                   child: const Text('Forgot PIN? Sign out to reset'),

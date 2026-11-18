@@ -48,7 +48,10 @@ class BrowseFilterButton extends HookConsumerWidget {
     final extensionDefault = _languageFilterDefault(
       DBKeys.extensionLanguageFilter.initial,
     );
-    final active = tabIndex == 0
+    final onlyNsfw =
+        ref.watch(showNSFWProvider).ifNull(false) &&
+        ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final active = onlyNsfw || (tabIndex == 0
         ? !_sameAsDefault(
             ref.watch(sourceLanguageFilterProvider),
             sourceDefault,
@@ -56,7 +59,7 @@ class BrowseFilterButton extends HookConsumerWidget {
         : !_sameAsDefault(
             ref.watch(extensionLanguageFilterProvider),
             extensionDefault,
-          );
+          ));
     final scheme = context.theme.colorScheme;
     return DesktopToolbarBox(
       key: buttonKey,
@@ -126,12 +129,14 @@ class BrowseFilterPanel extends ConsumerWidget {
                         .read(extensionLanguageFilterProvider.notifier)
                         .update(defaults);
                   }
+                  ref.read(onlyNsfwModeProvider.notifier).update(false);
                 },
                 child: Text(context.l10n.reset),
               ),
             ],
           ),
           const ShowNSFWTile(),
+          const OnlyNsfwModeTile(),
           const Divider(),
           Text(
             context.l10n.languages,

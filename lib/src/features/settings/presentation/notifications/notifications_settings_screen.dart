@@ -49,6 +49,9 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
     final analyticsEnabled = useValueListenable(
       AppTelemetry.analyticsEnabledNotifier,
     );
+    final crashlyticsEnabled = useValueListenable(
+      AppTelemetry.crashlyticsEnabledNotifier,
+    );
 
     Future<void> reconcile() => controller.sync();
 
@@ -66,7 +69,7 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
               padding: settingsPagePadding(context),
               children: [
                 const SettingsGroupHeading(
-                  label: 'Firebase Push (FCM) & Analytics',
+                  label: 'Firebase Push (FCM), Analytics & Crashlytics',
                   first: true,
                 ),
                 SettingsGroupCard(
@@ -155,6 +158,16 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
                       value: analyticsEnabled,
                       onChanged: (v) async {
                         await AppTelemetry.setAnalyticsEnabled(v);
+                      },
+                    ),
+                    CompactSwitchListTile(
+                      title: const Text('Firebase Crashlytics & Rustrak'),
+                      subtitle: const Text(
+                        'Automatic crash, exception & provider failure reporting',
+                      ),
+                      value: crashlyticsEnabled,
+                      onChanged: (v) async {
+                        await AppTelemetry.setCrashlyticsEnabled(v);
                       },
                     ),
                   ],

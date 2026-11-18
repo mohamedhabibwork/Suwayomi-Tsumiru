@@ -54,6 +54,7 @@ class HistoryFilterSheet extends ConsumerWidget {
           ),
           const Divider(),
           const ShowNSFWTile(),
+          const OnlyNsfwModeTile(),
         ],
       ),
     );

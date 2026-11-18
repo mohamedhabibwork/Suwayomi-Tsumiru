@@ -13,6 +13,7 @@ import '../../../../../constants/language_list.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/compact_switch.dart';
 import '../../../../../widgets/popup_widgets/pop_button.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../domain/language/flag_emoji.dart';
 import '../../../domain/language/language_model.dart';
 import '../controller/source_controller.dart';
@@ -73,7 +74,10 @@ class SourceLanguageFilter extends HookConsumerWidget {
           scale: context.windowSizeClass >= WindowSizeClass.medium ? .5 : .85,
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const NsfwFilterChipsRow(),
+            const SizedBox(height: 8),
             TextField(
               onChanged: (v) => searchQuery.value = v,
               decoration: InputDecoration(

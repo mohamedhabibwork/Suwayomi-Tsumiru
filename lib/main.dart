@@ -66,6 +66,7 @@ import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/diagnostics.dart';
 import 'src/utils/crash/provider_failure_logger.dart';
 import 'src/utils/crash/redact_tokens.dart';
+import 'src/utils/crash/rustrak_service.dart';
 import 'src/utils/desktop/desktop_window.dart';
 import 'src/utils/extensions/custom_extensions.dart';
 import 'src/utils/hive/graphql_cache_guard.dart';
@@ -119,6 +120,10 @@ Future<void> _startApp() async {
   _logBoot(
     'start v${packageInfo.version}+${packageInfo.buildNumber} '
     '(${defaultTargetPlatform.name})',
+  );
+  RustrakService.init(
+    appVersion: packageInfo.version,
+    buildNumber: packageInfo.buildNumber,
   );
   unawaited(
     AppTelemetry.init(
@@ -434,10 +439,11 @@ Future<void> _setUpCrashReporting() async {
   setDiagnosticSink((line) => writeCrashLog(_crashLogPath, line));
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
+    unawaited(AppTelemetry.recordFlutterError(details));
     _logCrash(details.exception, details.stack);
   };
   WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
-    _logCrash(error, stack);
+    _logCrash(error, stack, fatal: true);
     return true;
   };
   ErrorWidget.builder = (details) => AppErrorApp(
@@ -446,7 +452,7 @@ Future<void> _setUpCrashReporting() async {
   );
 }
 
-void _logCrash(Object error, StackTrace? stack) {
+void _logCrash(Object error, StackTrace? stack, {bool fatal = false}) {
   // Some exceptions have empty toString(); retain their runtime type.
   final body = redactTokens('${error.runtimeType}: $error\n$stack');
   debugPrint('Tsumiru error: $body');
@@ -454,10 +460,25 @@ void _logCrash(Object error, StackTrace? stack) {
     _crashLogPath,
     '[${DateTime.now().toIso8601String()}] $body\n\n',
   );
+  unawaited(
+    AppTelemetry.recordError(
+      error,
+      stack,
+      reason: fatal ? 'FatalError' : 'FlutterError',
+      fatal: fatal,
+    ),
+  );
+  unawaited(
+    RustrakService.captureException(
+      error,
+      stackTrace: stack,
+      culprit: fatal ? 'FatalError' : 'FlutterError',
+    ),
+  );
 }
 
 void _onFatalError(Object error, StackTrace stack) {
-  _logCrash(error, stack);
+  _logCrash(error, stack, fatal: true);
   // After the first frame, async errors must not replace the running app with a startup error screen.
   if (_appRendered) return;
   try {

@@ -17,6 +17,7 @@ import '../../../../manga_book/presentation/manga_details/widgets/chapter_contex
     show menuAnchorForPoint;
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
+import '../controller/extension_controller.dart';
 import 'extension_context_menu.dart';
 import 'extension_info_dialog.dart';
 import 'extension_list_tile.dart';
@@ -98,6 +99,14 @@ class _CardSubtitle extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final access = ref.watch(settledAccountAccessProvider);
+    final disabledList =
+        ref.watch(disabledExtensionsProvider) ?? const <String>[];
+    final isDisabled = extension.isInstalled.ifNull() &&
+        disabledList.any(
+          (pkg) =>
+              pkg.trim().toLowerCase() ==
+              extension.pkgName.trim().toLowerCase(),
+        );
     return Text.rich(
       TextSpan(
         text: '${extension.language?.displayName} ',
@@ -116,6 +125,14 @@ class _CardSubtitle extends ConsumerWidget {
             TextSpan(
               text: '${extension.versionName} ',
               style: const TextStyle(fontWeight: FontWeight.normal),
+            ),
+          if (isDisabled)
+            TextSpan(
+              text: 'Disabled ',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.outline,
+              ),
             ),
           if (isNsfwFromWarning(extension.contentWarning))
             TextSpan(

@@ -14,6 +14,7 @@ import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_n
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/source/source_model.dart';
+import '../../extension/controller/extension_controller.dart';
 
 part 'source_controller.g.dart';
 
@@ -27,22 +28,45 @@ Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
 
 /// Applies the NSFW source filter; defaults to false unless enabled via Face ID.
+/// When [onlyNsfwModeProvider] is active, shows ONLY +18 sources.
 @riverpod
 AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
-  return ref.watch(sourceListProvider).copyWithData(
-        (list) => list == null || showNsfw
-            ? list
-            : [...list.where((e) => !isNsfwFromWarning(e.contentWarning))],
-      );
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+  return ref.watch(sourceListProvider).copyWithData((list) {
+    if (list == null) return null;
+    if (!showNsfw) {
+      return [...list.where((e) => !isNsfwFromWarning(e.contentWarning))];
+    }
+    if (onlyNsfw) {
+      return [...list.where((e) => isNsfwFromWarning(e.contentWarning))];
+    }
+    return list;
+  });
 }
 
-/// Excludes hidden sources; the filter screen uses [visibleSourceList] so they can be unhidden.
+/// Excludes hidden sources and sources belonging to disabled extensions;
+/// the filter screen uses [visibleSourceList] so they can be unhidden.
 @riverpod
-AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) =>
-    ref.watch(visibleSourceListProvider).copyWithData(
-          (list) => list == null ? list : [...list.where((e) => !e.isHidden)],
-        );
+AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) {
+  final disabledExts = {
+    for (final pkg in ref.watch(disabledExtensionsProvider) ?? const <String>[])
+      pkg.trim().toLowerCase(),
+  };
+  return ref.watch(visibleSourceListProvider).copyWithData(
+        (list) => list == null
+            ? list
+            : [
+                ...list.where(
+                  (e) =>
+                      !e.isHidden &&
+                      !disabledExts.contains(
+                        e.$extension.pkgName.trim().toLowerCase(),
+                      ),
+                ),
+              ],
+      );
+}
 
 int _byName(SourceDto a, SourceDto b) =>
     a.name.toLowerCase().compareTo(b.name.toLowerCase());

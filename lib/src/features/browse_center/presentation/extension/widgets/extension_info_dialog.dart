@@ -20,6 +20,7 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../widgets/popup_widgets/confirm_action.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../account/data/account_providers.dart';
+import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../../../domain/source/source_model.dart';
@@ -310,7 +311,35 @@ class _DialogActions extends StatelessWidget {
     final installed = extension.isInstalled.ifNull();
     final hasUpdate = extension.hasUpdate.ifNull();
     final languageCode = extension.language?.code;
+    final disabledList =
+        ref.watch(disabledExtensionsProvider) ?? const <String>[];
+    final isEnabled = !disabledList.any(
+      (pkg) =>
+          pkg.trim().toLowerCase() == extension.pkgName.trim().toLowerCase(),
+    );
     final buttons = <Widget>[];
+    if (installed) {
+      buttons.add(
+        OutlinedButton.icon(
+          onPressed: !busy
+              ? () => _run(
+                  isEnabled ? 'Disabling' : 'Enabling',
+                  (actions) => actions.setExtensionEnabled(
+                    extension.pkgName,
+                    !isEnabled,
+                  ),
+                )
+              : null,
+          icon: Icon(
+            isEnabled
+                ? FluentIcons.checkmark_circle_24_regular
+                : FluentIcons.dismiss_circle_24_regular,
+            size: 20,
+          ),
+          label: Text(isEnabled ? 'Enabled (Tap to Disable)' : 'Disabled (Tap to Enable)'),
+        ),
+      );
+    }
     if (extension.isObsolete.ifNull()) {
       buttons.add(
         OutlinedButton(
@@ -475,6 +504,21 @@ class _SourceRow extends ConsumerWidget {
                 onPressed: () =>
                     _open(context, SourcePreferenceRoute(sourceId: source.id)),
               ),
+            SizedBox(
+              height: 32,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Switch.adaptive(
+                  value: !source.isHidden,
+                  onChanged: (val) async {
+                    await ref
+                        .read(sourceRepositoryProvider)
+                        .setSourceHidden(source.id, !val);
+                    ref.invalidate(sourceListProvider);
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),

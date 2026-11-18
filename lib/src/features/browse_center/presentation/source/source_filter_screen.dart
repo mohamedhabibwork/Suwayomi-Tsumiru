@@ -16,6 +16,7 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../data/source_repository/source_repository.dart';
 import '../../domain/content_rating.dart';
 import '../../domain/language/flag_emoji.dart';
@@ -91,12 +92,21 @@ class SourceFilterScreen extends HookConsumerWidget {
           });
 
         if (languages.isEmpty) {
-          return Emoticons(
-            title: context.l10n.noSourcesFound,
-            button: TextButton(
-              onPressed: refresh,
-              child: Text(context.l10n.refresh),
-            ),
+          return Column(
+            children: [
+              const ShowNSFWTile(),
+              const OnlyNsfwModeTile(),
+              const Divider(height: 1),
+              Expanded(
+                child: Emoticons(
+                  title: context.l10n.noSourcesFound,
+                  button: TextButton(
+                    onPressed: refresh,
+                    child: Text(context.l10n.refresh),
+                  ),
+                ),
+              ),
+            ],
           );
         }
 
@@ -104,6 +114,16 @@ class SourceFilterScreen extends HookConsumerWidget {
           onRefresh: refresh,
           child: CustomScrollView(
             slivers: [
+              const SliverToBoxAdapter(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ShowNSFWTile(),
+                    OnlyNsfwModeTile(),
+                    Divider(height: 1),
+                  ],
+                ),
+              ),
               for (final lang in languages) ...[
                 SliverToBoxAdapter(
                   child: _LanguageToggle(

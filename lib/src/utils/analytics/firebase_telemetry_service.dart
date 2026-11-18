@@ -9,12 +9,15 @@ import 'dart:convert';
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/notifications/data/local_notification_service.dart';
 import '../../routes/router_config.dart';
+import '../crash/redact_tokens.dart';
+import '../crash/rustrak_service.dart';
 
 /// Top-level background message handler required by [FirebaseMessaging].
 @pragma('vm:entry-point')
@@ -48,7 +51,9 @@ class AppTelemetry {
 
   static bool _initialized = false;
   static bool _analyticsEnabled = true;
+  static bool _crashlyticsEnabled = true;
   static FirebaseAnalytics? _analytics;
+  static FirebaseCrashlytics? _crashlytics;
   static FirebaseMessaging? _messaging;
 
   /// Reactive notifier holding the current device/web FCM registration token.
@@ -61,6 +66,10 @@ class AppTelemetry {
 
   /// Reactive notifier holding whether Firebase Analytics collection is enabled.
   static final ValueNotifier<bool> analyticsEnabledNotifier =
+      ValueNotifier<bool>(true);
+
+  /// Reactive notifier holding whether Firebase Crashlytics collection is enabled.
+  static final ValueNotifier<bool> crashlyticsEnabledNotifier =
       ValueNotifier<bool>(true);
 
   static String? get fcmToken => fcmTokenNotifier.value;
@@ -78,7 +87,7 @@ class AppTelemetry {
   /// Callback invoked when a foreground/opened FCM notification requests navigation.
   static void Function(String route)? onNavigateRequested;
 
-  /// Initializes Firebase Core, Analytics, and Cloud Messaging on mobile (iOS/Android).
+  /// Initializes Firebase Core, Crashlytics, Analytics, and Cloud Messaging on mobile (iOS/Android).
   static Future<void> init({
     String? appVersion,
     String? buildNumber,
@@ -88,6 +97,18 @@ class AppTelemetry {
       if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp();
       }
+      _crashlytics = FirebaseCrashlytics.instance;
+      await _crashlytics?.setCrashlyticsCollectionEnabled(_crashlyticsEnabled);
+      if (appVersion != null) {
+        unawaited(_crashlytics?.setCustomKey('app_version', appVersion));
+      }
+      if (buildNumber != null) {
+        unawaited(_crashlytics?.setCustomKey('build_number', buildNumber));
+      }
+      unawaited(
+        _crashlytics?.setCustomKey('platform', defaultTargetPlatform.name),
+      );
+
       _analytics = FirebaseAnalytics.instance;
       await _analytics?.setAnalyticsCollectionEnabled(_analyticsEnabled);
       await _analytics?.setDefaultEventParameters({
@@ -221,6 +242,57 @@ class AppTelemetry {
     } catch (_) {}
   }
 
+  static Future<void> setCrashlyticsEnabled(bool enabled) async {
+    _crashlyticsEnabled = enabled;
+    crashlyticsEnabledNotifier.value = enabled;
+    try {
+      await _crashlytics?.setCrashlyticsCollectionEnabled(enabled);
+    } catch (_) {}
+  }
+
+  /// Reports an exception to Firebase Crashlytics.
+  static Future<void> recordError(
+    Object exception,
+    StackTrace? stackTrace, {
+    String? reason,
+    bool fatal = false,
+    Iterable<Object> information = const [],
+  }) async {
+    if (!_initialized || !_crashlyticsEnabled || kIsWeb) return;
+    try {
+      await _crashlytics?.recordError(
+        redactTokens(exception.toString()),
+        stackTrace,
+        reason: reason != null ? redactTokens(reason) : null,
+        fatal: fatal,
+        information: information,
+      );
+    } catch (_) {}
+  }
+
+  /// Reports a FlutterErrorDetails to Firebase Crashlytics.
+  static Future<void> recordFlutterError(
+    FlutterErrorDetails details, {
+    bool fatal = false,
+  }) async {
+    if (!_initialized || !_crashlyticsEnabled || kIsWeb) return;
+    try {
+      if (fatal) {
+        await _crashlytics?.recordFlutterFatalError(details);
+      } else {
+        await _crashlytics?.recordFlutterError(details);
+      }
+    } catch (_) {}
+  }
+
+  /// Appends a diagnostic log line to Firebase Crashlytics.
+  static void logCrashlyticsBreadcrumb(String message) {
+    if (!_initialized || !_crashlyticsEnabled || kIsWeb) return;
+    try {
+      unawaited(_crashlytics?.log(redactTokens(message)));
+    } catch (_) {}
+  }
+
   static void _onForegroundMessage(RemoteMessage message) {
     final notification = message.notification;
     final data = message.data;
@@ -339,6 +411,12 @@ class AppTelemetry {
     required String screenName,
     String? screenClass,
   }) {
+    RustrakService.addBreadcrumb(
+      category: 'navigation',
+      message: 'Screen view: $screenName',
+      data: {'screen_class': screenClass ?? 'FlutterScreen'},
+    );
+    logCrashlyticsBreadcrumb('Screen view: $screenName (${screenClass ?? "FlutterScreen"})');
     if (!_initialized || !_analyticsEnabled) return;
     unawaited(
       _analytics
@@ -351,6 +429,17 @@ class AppTelemetry {
   }
 
   static void setUser({String? username, String? authMode}) {
+    RustrakService.setUser(username: username, authMode: authMode);
+    if (_initialized && !kIsWeb) {
+      final cleanUser =
+          (username != null && username.trim().isNotEmpty) ? username.trim() : '';
+      unawaited(_crashlytics?.setUserIdentifier(cleanUser).catchError((_) {}));
+      if (authMode != null) {
+        unawaited(
+          _crashlytics?.setCustomKey('auth_mode', authMode).catchError((_) {}),
+        );
+      }
+    }
     if (!_initialized || !_analyticsEnabled) return;
     unawaited(
       _analytics
@@ -382,6 +471,19 @@ class AppTelemetry {
     String name, [
     Map<String, Object?>? parameters,
   ]) {
+    RustrakService.addBreadcrumb(
+      category: 'action',
+      message: name,
+      data: parameters == null
+          ? null
+          : {
+              for (final e in parameters.entries)
+                if (e.value != null) e.key: '${e.value}',
+            },
+    );
+    logCrashlyticsBreadcrumb(
+      parameters == null || parameters.isEmpty ? 'Event: $name' : 'Event: $name $parameters',
+    );
     if (!_initialized || !_analyticsEnabled) return;
     final sanitized = <String, Object>{};
     if (parameters != null) {

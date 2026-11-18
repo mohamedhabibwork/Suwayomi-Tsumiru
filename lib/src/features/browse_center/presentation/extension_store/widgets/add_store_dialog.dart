@@ -31,7 +31,10 @@ class AddStoreDialog extends HookConsumerWidget {
     final serverError = useState<String?>(null);
 
     final trimmed = url.value.trim();
-    final isDuplicate = existingUrls.contains(trimmed);
+    final isDuplicate =
+        existingUrls.contains(trimmed) ||
+        (trimmed.isNotEmpty &&
+            isExtensionStoreUrlPresent(trimmed, existingUrls));
     final canManage = ref
         .watch(settledAccountAccessProvider)
         .allows(Enum$UserPermission.MANAGE_EXTENSION_STORES);
@@ -89,7 +92,10 @@ class AddStoreDialog extends HookConsumerWidget {
             runSpacing: 8,
             children: [
               for (final preset in kCuratedExtensionStores)
-                if (!existingUrls.contains(preset.indexUrl) &&
+                if (!isExtensionStoreUrlPresent(
+                      preset.indexUrl,
+                      existingUrls,
+                    ) &&
                     (ref.watch(showNSFWProvider).ifNull(false) ||
                         !preset.isNsfw))
                   ActionChip(

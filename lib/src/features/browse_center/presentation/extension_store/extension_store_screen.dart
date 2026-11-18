@@ -28,6 +28,7 @@ import '../../../settings/widgets/settings_group_card/settings_group_card.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/top_extensions.dart';
 import '../../domain/extension_store/extension_store_model.dart';
+import '../extension/controller/extension_controller.dart';
 import 'widgets/add_store_dialog.dart';
 
 const kStoreHelpUrl = 'https://tsumiru.app/docs/guides/adding-sources';
@@ -107,15 +108,21 @@ class ExtensionStoreScreen extends ConsumerWidget {
                 Expanded(
                   child: storeData.showUiWhenData(context, (data) {
                     final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+                    final onlyNsfw =
+                        showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
                     final stores = (data?.stores ?? const <ExtensionStore>[])
-                        .where(
-                          (s) =>
-                              showNsfw ||
-                              (!s.name.contains('18+') &&
-                                  !s.indexUrl
-                                      .toLowerCase()
-                                      .contains('adult')),
-                        )
+                        .where((s) {
+                          final isAdultStore =
+                              s.name.contains('18+') ||
+                              s.indexUrl.toLowerCase().contains('adult');
+                          if (!showNsfw && isAdultStore) return false;
+                          if (onlyNsfw &&
+                              !isAdultStore &&
+                              !s.name.toLowerCase().contains('keiyoushi')) {
+                            return false;
+                          }
+                          return true;
+                        })
                         .toList();
                     final existingUrls = {
                       for (final s in data?.stores ?? const <ExtensionStore>[])
@@ -123,8 +130,12 @@ class ExtensionStoreScreen extends ConsumerWidget {
                     };
                     final availablePresets = [
                       for (final preset in kCuratedExtensionStores)
-                        if (!existingUrls.contains(preset.indexUrl) &&
-                            (showNsfw || !preset.isNsfw))
+                        if (!isExtensionStoreUrlPresent(
+                              preset.indexUrl,
+                              existingUrls,
+                            ) &&
+                            (showNsfw || !preset.isNsfw) &&
+                            (!onlyNsfw || preset.isNsfw))
                           preset,
                     ];
                     if (stores.isEmpty) {
@@ -182,87 +193,118 @@ class ExtensionStoreScreen extends ConsumerWidget {
                             ),
                           const SizedBox(height: 8),
                         ],
-                        SettingsGroupCard(
+                         SettingsGroupCard(
                           children: [
                             for (final store in stores)
-                              ListTile(
-                                leading: const Icon(
-                                  FluentIcons.puzzle_piece_24_regular,
-                                  size: 48,
-                                ),
-                                title: Text(store.name),
-                                subtitle: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (store.contactWebsite.isNotBlank)
-                                      IconButton(
-                                        icon: const Icon(FluentIcons.globe_24_regular),
-                                        onPressed: () => launchUrlInWeb(
-                                          context,
-                                          store.contactWebsite,
-                                          ref.read(toastProvider),
-                                        ),
-                                      ),
-                                    if (store.contactDiscord != null)
-                                      IconButton(
-                                        icon: const Icon(BrandIcons.discord),
-                                        onPressed: () => launchUrlInWeb(
-                                          context,
-                                          store.contactDiscord!,
-                                          ref.read(toastProvider),
-                                        ),
-                                      ),
-                                    IconButton(
-                                      icon: const Icon(FluentIcons.copy_24_regular),
-                                      onPressed: () async {
-                                        await Clipboard.setData(
-                                          ClipboardData(text: store.indexUrl),
-                                        );
-                                        if (context.mounted) {
-                                          ref
-                                              .read(toastProvider)
-                                              ?.show(context.l10n.copied);
-                                        }
+                              Builder(
+                                builder: (context) {
+                                  final disabledStores =
+                                      ref.watch(disabledExtensionStoresProvider) ??
+                                      const <String>[];
+                                  final normalizedStoreUrl =
+                                      normalizeExtensionStoreUrl(store.indexUrl);
+                                  final isStoreEnabled = !disabledStores.any(
+                                    (u) =>
+                                        normalizeExtensionStoreUrl(u) ==
+                                        normalizedStoreUrl,
+                                  );
+                                  return ListTile(
+                                    leading: const Icon(
+                                      FluentIcons.puzzle_piece_24_regular,
+                                      size: 48,
+                                    ),
+                                    title: Text(store.name),
+                                    trailing: Switch.adaptive(
+                                      value: isStoreEnabled,
+                                      onChanged: (val) {
+                                        ref
+                                            .read(
+                                              disabledExtensionStoresProvider
+                                                  .notifier,
+                                            )
+                                            .setStoreEnabled(store.indexUrl, val);
                                       },
                                     ),
-                                    IconButton(
-                                      icon: const Icon(FluentIcons.delete_24_regular),
-                                      onPressed: !canManage
-                                          ? null
-                                          : () => showDialog(
-                                              context: context,
-                                              builder: (_) => AlertDialog(
-                                                title: Text(
-                                                  context
-                                                      .l10n
-                                                      .removeExtensionStore,
-                                                ),
-                                                content: Text(
-                                                  context.l10n
-                                                      .removeExtensionStoreBody(
-                                                        store.name,
-                                                        store.indexUrl,
-                                                      ),
-                                                ),
-                                                actions: [
-                                                  const PopButton(),
-                                                  ElevatedButton(
-                                                    onPressed: () {
-                                                      Navigator.pop(context);
-                                                      removeStore(store);
-                                                    },
-                                                    child: Text(
-                                                      context.l10n.ok,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              animationStyle:
-                                                  context.motionStyle,
+                                    subtitle: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (store.contactWebsite.isNotBlank)
+                                          IconButton(
+                                            icon: const Icon(
+                                              FluentIcons.globe_24_regular,
                                             ),
+                                            onPressed: () => launchUrlInWeb(
+                                              context,
+                                              store.contactWebsite,
+                                              ref.read(toastProvider),
+                                            ),
+                                          ),
+                                        if (store.contactDiscord != null)
+                                          IconButton(
+                                            icon: const Icon(BrandIcons.discord),
+                                            onPressed: () => launchUrlInWeb(
+                                              context,
+                                              store.contactDiscord!,
+                                              ref.read(toastProvider),
+                                            ),
+                                          ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            FluentIcons.copy_24_regular,
+                                          ),
+                                          onPressed: () async {
+                                            await Clipboard.setData(
+                                              ClipboardData(text: store.indexUrl),
+                                            );
+                                            if (context.mounted) {
+                                              ref
+                                                  .read(toastProvider)
+                                                  ?.show(context.l10n.copied);
+                                            }
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            FluentIcons.delete_24_regular,
+                                          ),
+                                          onPressed: !canManage
+                                              ? null
+                                              : () => showDialog(
+                                                  context: context,
+                                                  builder: (_) => AlertDialog(
+                                                    title: Text(
+                                                      context
+                                                          .l10n
+                                                          .removeExtensionStore,
+                                                    ),
+                                                    content: Text(
+                                                      context.l10n
+                                                          .removeExtensionStoreBody(
+                                                            store.name,
+                                                            store.indexUrl,
+                                                          ),
+                                                    ),
+                                                    actions: [
+                                                      const PopButton(),
+                                                      ElevatedButton(
+                                                        onPressed: () {
+                                                          Navigator.pop(context);
+                                                          removeStore(store);
+                                                        },
+                                                        child: Text(
+                                                          context.l10n.ok,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  animationStyle:
+                                                      context.motionStyle,
+                                                ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
                           ],
                         ),

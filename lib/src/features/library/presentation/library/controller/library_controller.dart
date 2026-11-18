@@ -323,9 +323,10 @@ class CategoryMangaListWithQueryAndFilter
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
-    final mangaFilterLewd = showNsfw
-        ? ref.watch(libraryMangaFilterLewdProvider)
-        : false;
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final mangaFilterLewd = !showNsfw
+        ? false
+        : (onlyNsfw ? true : ref.watch(libraryMangaFilterLewdProvider));
     final filterCategories = ref
         .watch(libraryFilterCategoriesProvider)
         .ifNull(false);
@@ -766,9 +767,10 @@ class GroupedMangaListWithQueryAndFilter
     final offlineMangaIds =
         ref.watch(offlineDeviceMangaIdsProvider).value ?? const <int>{};
     final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
-    final mangaFilterLewd = showNsfw
-        ? ref.watch(libraryMangaFilterLewdProvider)
-        : false;
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final mangaFilterLewd = !showNsfw
+        ? false
+        : (onlyNsfw ? true : ref.watch(libraryMangaFilterLewdProvider));
     final filterCategories = ref
         .watch(libraryFilterCategoriesProvider)
         .ifNull(false);

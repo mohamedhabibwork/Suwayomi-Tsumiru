@@ -8,7 +8,9 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/top_extensions.dart';
 import '../extension/controller/extension_actions.dart';
@@ -36,6 +38,8 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeCategory = ref.watch(selectedResourceCategoryProvider);
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -51,6 +55,23 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
                   .read(selectedResourceCategoryProvider.notifier)
                   .select(category),
             ),
+          FilterChip(
+            selected: showNsfw,
+            avatar: Icon(
+              showNsfw
+                  ? FluentIcons.shield_24_filled
+                  : FluentIcons.shield_lock_24_regular,
+              size: 16,
+            ),
+            label: const Text('+18'),
+            onSelected: (v) => setNsfwEnabled(ref, v),
+          ),
+          FilterChip(
+            selected: onlyNsfw,
+            avatar: const Icon(FluentIcons.fire_24_regular, size: 16),
+            label: const Text('Only +18'),
+            onSelected: (v) => setOnlyNsfwMode(ref, v),
+          ),
           ActionChip(
             avatar: const Icon(
               FluentIcons.checkmark_circle_24_regular,
@@ -62,9 +83,16 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
               toast?.show(
                 'Syncing default Manga, Video, Novel, Aidoku & Mangayomi stores...',
               );
+              final storeList = await ref.read(extensionStoreListProvider.future);
+              final existingUrls = {
+                ...?storeList?.stores.map((s) => s.indexUrl),
+              };
               for (final preset in kCuratedExtensionStores.where(
                 (s) => s.isDefault && !s.isNsfw,
               )) {
+                if (isExtensionStoreUrlPresent(preset.indexUrl, existingUrls)) {
+                  continue;
+                }
                 try {
                   await ref
                       .read(extensionStoreRepositoryProvider)

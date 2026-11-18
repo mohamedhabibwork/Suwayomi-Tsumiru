@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tsumiru/src/features/browse_center/domain/extension/top_extensions.dart';
 import 'package:tsumiru/src/features/settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import 'package:tsumiru/src/features/settings/presentation/security/app_lock_gate.dart';
 import 'package:tsumiru/src/features/settings/presentation/security/security_settings_dialog.dart';
@@ -143,5 +144,84 @@ void main() {
       expect(find.text('Enter Passcode'), findsNothing);
       expect(container.read(appLockSessionUnlockedProvider), isTrue);
     });
+
+    testWidgets(
+      '+18 Mode (Show Only +18) links with Enable/Disable +18 and deduplicates extension store URLs',
+      (tester) async {
+        resetNsfwFaceIdSession();
+        debugNsfwFaceIdAuthOverride = ({String reason = ''}) async => true;
+        addTearDown(() {
+          debugNsfwFaceIdAuthOverride = null;
+          resetNsfwFaceIdSession();
+        });
+
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final container = ProviderContainer(
+          overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: Column(
+                  children: [
+                    ShowNSFWTile(),
+                    OnlyNsfwModeTile(),
+                    NsfwFilterChipsRow(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(container.read(showNSFWProvider), isFalse);
+        expect(container.read(onlyNsfwModeProvider), isFalse);
+
+        // Tapping "+18 Mode (Show Only +18)" automatically unlocks +18 and enables Only +18
+        await tester.tap(find.text('+18 Mode (Show Only +18)'));
+        await tester.pumpAndSettle();
+        expect(container.read(showNSFWProvider), isTrue);
+        expect(container.read(onlyNsfwModeProvider), isTrue);
+
+        // Disabling +18 automatically disables Only +18
+        await tester.tap(find.text('+18 Enabled'));
+        await tester.pumpAndSettle();
+        expect(container.read(showNSFWProvider), isFalse);
+        expect(container.read(onlyNsfwModeProvider), isFalse);
+
+        // Verify extension store URL normalization and duplicate detection
+        expect(
+          normalizeExtensionStoreUrl(
+            'https://github.com/keiyoushi/extensions/raw/repo/index.pb',
+          ),
+          normalizeExtensionStoreUrl(
+            'https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb',
+          ),
+        );
+        expect(
+          isExtensionStoreUrlPresent(
+            'https://github.com/keiyoushi/extensions/raw/repo/index.pb',
+            const [
+              'https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb',
+            ],
+          ),
+          isTrue,
+        );
+        expect(
+          isRedundantDuplicateStoreUrl(
+            'https://raw.githubusercontent.com/MO350AZ/extensions-no-nsfw/repo/repo.json',
+          ),
+          isTrue,
+        );
+      },
+    );
   });
 }

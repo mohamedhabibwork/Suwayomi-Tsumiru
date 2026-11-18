@@ -763,6 +763,15 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
+    id: 'onlyNsfwMode',
+    title: (_) => '+18 Mode (Show Only +18)',
+    subtitle: (_) =>
+        'Filter sources, extensions, library & history to show only +18 content',
+    breadcrumb: (l) => l.browse,
+    open: (c) => const BrowseSettingsRoute(highlight: 'onlyNsfwMode').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
     id: 'parallelSourceRequests',
     title: (l) => l.parallelSourceRequest,
     breadcrumb: (l) => l.browse,

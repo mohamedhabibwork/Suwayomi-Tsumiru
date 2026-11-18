@@ -22,6 +22,7 @@ import '../../../../manga_book/presentation/manga_details/widgets/chapter_contex
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
 import '../controller/extension_actions.dart';
+import '../controller/extension_controller.dart';
 import 'extension_context_menu.dart';
 import 'extension_info_dialog.dart';
 
@@ -34,6 +35,12 @@ class ExtensionListTile extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final runningAction = useState<String?>(null);
     final access = ref.watch(settledAccountAccessProvider);
+    final disabledList = ref.watch(disabledExtensionsProvider) ?? const <String>[];
+    final isInstalled = extension.isInstalled.ifNull();
+    final isDisabled = isInstalled &&
+        disabledList.any(
+          (pkg) => pkg.trim().toLowerCase() == extension.pkgName.trim().toLowerCase(),
+        );
     return ListTile(
       key: key,
       onTap: () => openExtensionInfo(context, pkgName: extension.pkgName),
@@ -65,6 +72,14 @@ class ExtensionListTile extends HookConsumerWidget {
               TextSpan(
                 text: "${extension.versionName} ",
                 style: const TextStyle(fontWeight: FontWeight.normal),
+              ),
+            if (isDisabled)
+              TextSpan(
+                text: 'Disabled ',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: context.colorScheme.outline,
+                ),
               ),
             if (isNsfwFromWarning(extension.contentWarning))
               TextSpan(
@@ -184,6 +199,28 @@ class ExtensionListTileTailing extends StatelessWidget {
       );
     }
     final hasUpdate = extension.hasUpdate.ifNull();
+    final disabledList =
+        ref.watch(disabledExtensionsProvider) ?? const <String>[];
+    final isEnabled = !disabledList.any(
+      (pkg) =>
+          pkg.trim().toLowerCase() == extension.pkgName.trim().toLowerCase(),
+    );
+    final enableSwitch = SizedBox(
+      height: 32,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Switch.adaptive(
+          value: isEnabled,
+          onChanged: running == null
+              ? (val) {
+                  ref
+                      .read(extensionActionsProvider)
+                      .setExtensionEnabled(extension.pkgName, val);
+                }
+              : null,
+        ),
+      ),
+    );
     final actionButton = TextButton(
       onPressed: (hasUpdate || canUninstall) && running == null
           ? () => _run(
@@ -208,6 +245,8 @@ class ExtensionListTileTailing extends StatelessWidget {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          enableSwitch,
+          const SizedBox(width: 4),
           actionButton,
           _DesktopMoreButton(extension: extension, ref: ref),
         ],
@@ -216,16 +255,28 @@ class ExtensionListTileTailing extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        actionButton,
-        // A third control squeezes the extension name off a phone screen.
+        enableSwitch,
         if (hasUpdate)
+          actionButton
+        else
           PopupMenuButton<VoidCallback>(
             icon: const Icon(
               FluentIcons.more_vertical_24_regular,
             ),
-            enabled: canUninstall && running == null,
+            enabled: running == null,
             onSelected: (selected) => selected(),
             itemBuilder: (context) => [
+              PopupMenuItem(
+                value: () => ref
+                    .read(extensionActionsProvider)
+                    .setExtensionEnabled(extension.pkgName, !isEnabled),
+                child: ChapterMenuRow(
+                  icon: isEnabled
+                      ? FluentIcons.dismiss_circle_24_regular
+                      : FluentIcons.checkmark_circle_24_regular,
+                  label: isEnabled ? 'Disable Extension' : 'Enable Extension',
+                ),
+              ),
               PopupMenuItem(
                 enabled: canInstall && canUninstall,
                 value: _reinstall(context),
@@ -235,6 +286,7 @@ class ExtensionListTileTailing extends StatelessWidget {
                 ),
               ),
               PopupMenuItem(
+                enabled: canUninstall,
                 value: () => _run(
                   context.l10n.uninstalling,
                   (actions) => actions.uninstall(extension.pkgName),
@@ -246,16 +298,6 @@ class ExtensionListTileTailing extends StatelessWidget {
               ),
             ],
             popUpAnimationStyle: context.motionStyle,
-          )
-        else
-          IconButton(
-            tooltip: canInstall && canUninstall
-                ? context.l10n.reinstall
-                : context.l10n.accountPermissionDenied,
-            icon: const Icon(FluentIcons.arrow_clockwise_24_regular),
-            onPressed: canInstall && canUninstall && running == null
-                ? _reinstall(context)
-                : null,
           ),
       ],
     );

@@ -4,6 +4,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../constants/db_keys.dart';
@@ -14,12 +15,106 @@ import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_n
 import '../../../data/extension_repository/extension_repository.dart';
 import '../../../domain/content_rating.dart';
 import '../../../domain/extension/extension_model.dart';
+import '../../../domain/extension/top_extensions.dart';
 
 part 'extension_controller.g.dart';
+
+/// Persisted list of disabled extension package names (lowercase).
+/// When an extension is in this list, all its sources are hidden from Browse
+/// without uninstalling the extension APK/bundle.
+class DisabledExtensionsNotifier extends Notifier<List<String>?>
+    with SharedPreferenceClientMixin<List<String>> {
+  @override
+  List<String>? build() => initialize(DBKeys.disabledExtensions);
+
+  bool isDisabled(String pkgName) {
+    final normalized = pkgName.trim().toLowerCase();
+    if (normalized.isEmpty) return false;
+    return (state ?? const <String>[])
+        .any((e) => e.trim().toLowerCase() == normalized);
+  }
+
+  void setEnabled(String pkgName, bool enabled) {
+    final normalized = pkgName.trim().toLowerCase();
+    if (normalized.isEmpty) return;
+    final current = {
+      for (final e in state ?? const <String>[]) e.trim().toLowerCase(),
+    };
+    if (enabled) {
+      current.remove(normalized);
+    } else {
+      current.add(normalized);
+    }
+    update(current.toList());
+  }
+}
+
+final disabledExtensionsProvider =
+    NotifierProvider<DisabledExtensionsNotifier, List<String>?>(
+      DisabledExtensionsNotifier.new,
+    );
+
+/// Persisted list of disabled extension store URLs (normalized).
+class DisabledExtensionStoresNotifier extends Notifier<List<String>?>
+    with SharedPreferenceClientMixin<List<String>> {
+  @override
+  List<String>? build() => initialize(DBKeys.disabledExtensionStores);
+
+  bool isStoreDisabled(String indexUrl) {
+    final normalized = normalizeExtensionStoreUrl(indexUrl);
+    if (normalized.isEmpty) return false;
+    return (state ?? const <String>[])
+        .any((u) => normalizeExtensionStoreUrl(u) == normalized);
+  }
+
+  void setStoreEnabled(String indexUrl, bool enabled) {
+    final normalized = normalizeExtensionStoreUrl(indexUrl);
+    if (normalized.isEmpty) return;
+    final current = [
+      for (final u in state ?? const <String>[])
+        if (normalizeExtensionStoreUrl(u) != normalized) u,
+    ];
+    if (!enabled) {
+      current.add(indexUrl.trim());
+    }
+    update(current);
+  }
+}
+
+final disabledExtensionStoresProvider =
+    NotifierProvider<DisabledExtensionStoresNotifier, List<String>?>(
+      DisabledExtensionStoresNotifier.new,
+    );
 
 String normalizeExtensionLang(Extension e) {
   final raw = (e.language?.code ?? e.lang).trim().toLowerCase();
   return raw.isEmpty ? 'other' : raw;
+}
+
+/// Deduplicates extensions by [Extension.pkgName], preferring installed,
+/// then hasUpdate, then highest versionCodeLong.
+List<Extension> deduplicateExtensions(Iterable<Extension> input) {
+  final byPkg = <String, Extension>{};
+  for (final ext in input) {
+    final key = ext.pkgName.trim().toLowerCase();
+    final existing = byPkg[key];
+    if (existing == null) {
+      byPkg[key] = ext;
+      continue;
+    }
+    final extInstalled = ext.isInstalled.ifNull();
+    final existingInstalled = existing.isInstalled.ifNull();
+    if (extInstalled && !existingInstalled) {
+      byPkg[key] = ext;
+    } else if (extInstalled == existingInstalled) {
+      final extVer = int.tryParse(ext.versionCodeLong) ?? 0;
+      final existingVer = int.tryParse(existing.versionCodeLong) ?? 0;
+      if (extVer > existingVer) {
+        byPkg[key] = ext;
+      }
+    }
+  }
+  return byPkg.values.toList();
 }
 
 @riverpod
@@ -34,10 +129,27 @@ Future<List<Extension>?> extension(Ref ref) {
 AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   final extensionMap = <String, List<Extension>>{};
   final extensionListData = ref.watch(extensionProvider);
-  final extensionList = [...?extensionListData.value];
+  final extensionList = deduplicateExtensions([
+    ...?extensionListData.value,
+  ]);
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+  final disabledStoresRaw =
+      ref.watch(disabledExtensionStoresProvider) ?? const <String>[];
+  final disabledStoreSet = {
+    for (final u in disabledStoresRaw) normalizeExtensionStoreUrl(u),
+  };
   for (final e in extensionList) {
-    if (!showNsfw && isNsfwFromWarning(e.contentWarning)) continue;
+    final isNsfw = isNsfwFromWarning(e.contentWarning);
+    if (!showNsfw && isNsfw) continue;
+    if (onlyNsfw && !isNsfw) continue;
+    if (!e.isInstalled.ifNull()) {
+      final storeUrl = e.extensionStore?.indexUrl ?? e.storeIndexUrl ?? '';
+      if (storeUrl.isNotEmpty &&
+          disabledStoreSet.contains(normalizeExtensionStoreUrl(storeUrl))) {
+        continue;
+      }
+    }
     if (e.isInstalled.ifNull()) {
       if (e.hasUpdate.ifNull()) {
         extensionMap.update(
@@ -70,11 +182,16 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
 
 @riverpod
 List<String> extensionFilterLangList(Ref ref) {
-  final extensionList = [...?ref.watch(extensionProvider).value];
+  final extensionList = deduplicateExtensions([
+    ...?ref.watch(extensionProvider).value,
+  ]);
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   final codes = <String>{};
   for (final e in extensionList) {
-    if (!showNsfw && isNsfwFromWarning(e.contentWarning)) continue;
+    final isNsfw = isNsfwFromWarning(e.contentWarning);
+    if (!showNsfw && isNsfw) continue;
+    if (onlyNsfw && !isNsfw) continue;
     codes.add(normalizeExtensionLang(e));
   }
   final mapKeys = {...?ref.watch(extensionMapProvider).value?.keys};

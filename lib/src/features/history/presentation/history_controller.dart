@@ -56,6 +56,7 @@ class ReadingHistory extends _$ReadingHistory {
   Future<List<HistoryItemDto>?> build() async {
     final inLibrary = ref.watch(historyFilterInLibraryProvider);
     final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
     final items = await ref
         .watch(historyRepositoryProvider)
         .getReadingHistory(inLibrary: inLibrary);
@@ -64,6 +65,9 @@ class ReadingHistory extends _$ReadingHistory {
     if (!showNsfw) {
       return items.where((item) => !isHistoryItemNsfw(item)).toList();
     }
+    if (onlyNsfw) {
+      return items.where(isHistoryItemNsfw).toList();
+    }
     return items;
   }
 
@@ -71,6 +75,7 @@ class ReadingHistory extends _$ReadingHistory {
     // Retain current items while the pull-to-refresh indicator shows progress.
     final inLibrary = ref.read(historyFilterInLibraryProvider);
     final showNsfw = ref.read(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.read(onlyNsfwModeProvider).ifNull(false);
     final result = await AsyncValue.guard(
       () => ref
           .read(historyRepositoryProvider)
@@ -80,9 +85,9 @@ class ReadingHistory extends _$ReadingHistory {
     final items = result.asData?.value;
     if (items != null) {
       state = AsyncData(
-        showNsfw
-            ? items
-            : items.where((item) => !isHistoryItemNsfw(item)).toList(),
+        !showNsfw
+            ? items.where((item) => !isHistoryItemNsfw(item)).toList()
+            : (onlyNsfw ? items.where(isHistoryItemNsfw).toList() : items),
       );
     }
   }
@@ -180,10 +185,11 @@ bool historyItemMatchesFilter(HistoryItemDto item, HistoryFilter filter) {
 @riverpod
 List<HistoryGroup> historyGroupedByDate(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   final rawItems = ref.watch(readingHistoryProvider).value ?? [];
-  final allItems = showNsfw
-      ? rawItems
-      : rawItems.where((item) => !isHistoryItemNsfw(item)).toList();
+  final allItems = !showNsfw
+      ? rawItems.where((item) => !isHistoryItemNsfw(item)).toList()
+      : (onlyNsfw ? rawItems.where(isHistoryItemNsfw).toList() : rawItems);
   final filter = ref.watch(historyFilterProvider);
   final historyItems = filter == kNoHistoryFilter
       ? allItems

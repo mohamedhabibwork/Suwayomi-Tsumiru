@@ -189,6 +189,8 @@ class SecuritySettingsDialog extends HookConsumerWidget {
                   .update(!disableSharing),
             ),
             const Divider(),
+            const ShowNSFWTile(),
+            const OnlyNsfwModeTile(),
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(FluentIcons.eye_off_24_regular),

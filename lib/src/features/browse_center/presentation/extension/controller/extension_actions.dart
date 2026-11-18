@@ -13,6 +13,7 @@ import '../../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/extension_repository/extension_repository.dart';
+import '../../../data/source_repository/source_repository.dart';
 import '../../source/controller/source_controller.dart';
 import 'extension_controller.dart';
 import 'extension_update_badge.dart';
@@ -79,7 +80,32 @@ class ExtensionActions {
 
   Future<void> uninstall(String pkgName) {
     AppTelemetry.logExtensionAction(action: 'uninstall', pkgName: pkgName);
+    _ref.read(disabledExtensionsProvider.notifier).setEnabled(pkgName, true);
     return _refreshAfter((_) => _repository.uninstallExtension(pkgName));
+  }
+
+  /// Enables or disables an installed extension and syncs the hidden state of
+  /// all its sources so disabled extensions do not appear in Browse Sources.
+  Future<void> setExtensionEnabled(String pkgName, bool enabled) async {
+    AppTelemetry.logExtensionAction(
+      action: enabled ? 'enable' : 'disable',
+      pkgName: pkgName,
+    );
+    _ref.read(disabledExtensionsProvider.notifier).setEnabled(pkgName, enabled);
+    try {
+      final normalizedPkg = pkgName.trim().toLowerCase();
+      final sources = _ref.read(sourceListProvider).value ?? const [];
+      final matching = sources
+          .where((s) => s.$extension.pkgName.trim().toLowerCase() == normalizedPkg)
+          .toList();
+      if (matching.isNotEmpty) {
+        final sourceRepo = _ref.read(sourceRepositoryProvider);
+        await Future.wait(
+          matching.map((s) => sourceRepo.setSourceHidden(s.id, !enabled)),
+        );
+        _ref.invalidate(sourceListProvider);
+      }
+    } catch (_) {}
   }
 
   Future<void> _install(
@@ -95,6 +121,7 @@ class ExtensionActions {
     }
     await _repository.installExtension(pkgName);
     if (!current()) return;
+    _ref.read(disabledExtensionsProvider.notifier).setEnabled(pkgName, true);
     if (resolvedLang.isNotBlank) _enableSourceLanguage(resolvedLang!);
   }
 

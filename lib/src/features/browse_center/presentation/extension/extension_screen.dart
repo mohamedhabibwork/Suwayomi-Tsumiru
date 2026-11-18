@@ -56,7 +56,7 @@ class ExtensionScreen extends HookConsumerWidget {
           key: key,
           itemCount: list.length,
           itemBuilder: (context, index) => ExtensionCard(
-            key: ValueKey(list[index].pkgName),
+            key: ValueKey('$title:${list[index].pkgName}'),
             extension: list[index],
           ),
         )
@@ -65,7 +65,7 @@ class ExtensionScreen extends HookConsumerWidget {
           key: key,
           delegate: SliverChildBuilderDelegate(
             (context, index) => ExtensionListTile(
-              key: ValueKey(list[index].pkgName),
+              key: ValueKey('$title:${list[index].pkgName}'),
               extension: list[index],
             ),
             childCount: list.length,
@@ -124,7 +124,7 @@ class ExtensionScreen extends HookConsumerWidget {
     };
     final hasDefaultStores = kCuratedExtensionStores
         .where((s) => s.isDefault && !s.isNsfw)
-        .every((s) => existingStoreUrls.contains(s.indexUrl));
+        .every((s) => isExtensionStoreUrlPresent(s.indexUrl, existingStoreUrls));
     final addingStores = useState(false);
 
     Future<void> quickAddDefaultStores() async {
@@ -134,6 +134,9 @@ class ExtensionScreen extends HookConsumerWidget {
         for (final preset in kCuratedExtensionStores.where(
           (s) => s.isDefault && !s.isNsfw,
         )) {
+          if (isExtensionStoreUrlPresent(preset.indexUrl, existingStoreUrls)) {
+            continue;
+          }
           try {
             await ref
                 .read(extensionStoreRepositoryProvider)
@@ -350,6 +353,29 @@ class ExtensionScreen extends HookConsumerWidget {
                 title: languageMap["installed"]?.displayName ?? "",
                 extensions: installed,
                 desktop: desktop,
+                headerTrailing: Builder(
+                  builder: (context) {
+                    final disabledList =
+                        ref.watch(disabledExtensionsProvider) ?? const <String>[];
+                    final allEnabled = (installed ?? []).every(
+                      (ext) => !disabledList.any(
+                        (pkg) =>
+                            pkg.trim().toLowerCase() ==
+                            ext.pkgName.trim().toLowerCase(),
+                      ),
+                    );
+                    return TextButton(
+                      onPressed: () async {
+                        for (final ext in installed ?? const <Extension>[]) {
+                          await ref
+                              .read(extensionActionsProvider)
+                              .setExtensionEnabled(ext.pkgName, !allEnabled);
+                        }
+                      },
+                      child: Text(allEnabled ? 'Disable All' : 'Enable All'),
+                    );
+                  },
+                ),
               ),
             if (all.isNotBlank)
               ...extensionSet(

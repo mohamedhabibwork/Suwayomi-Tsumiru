@@ -101,6 +101,7 @@ class HistoryFilterPanel extends ConsumerWidget {
           ),
           const Divider(),
           const ShowNSFWTile(),
+          const OnlyNsfwModeTile(),
         ],
       ),
     );

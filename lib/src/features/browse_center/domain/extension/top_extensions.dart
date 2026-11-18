@@ -13,35 +13,19 @@ import 'extension_model.dart';
 
 /// Official Keiyoushi extension repository index URL (Protobuf).
 const kKeiyoushiStoreUrl =
-    'https://github.com/keiyoushi/extensions/raw/repo/index.pb';
-
-/// Official Keiyoushi raw GitHub mirror index URL (Protobuf).
-const kKeiyoushiRawStoreUrl =
     'https://raw.githubusercontent.com/keiyoushi/extensions/repo/index.pb';
+
+/// Legacy GitHub redirect URL for Keiyoushi (kept for normalization/deduplication).
+const kKeiyoushiLegacyGithubUrl =
+    'https://github.com/keiyoushi/extensions/raw/repo/index.pb';
 
 /// Yuzono Anime & Video Protobuf extension store.
 const kYuzonoAnimePbStoreUrl =
     'https://x.ujol.workers.dev/yuzono/anime/index.pb';
 
-/// Extensions No NSFW store (redirects via index_v2 to index.pb).
-const kNoNsfwRepoUrl =
-    'https://raw.githubusercontent.com/MO350AZ/extensions-no-nsfw/repo/repo.json';
-
-/// FelipeGFA Protobuf extension store.
-const kFelipeGfaStoreUrl =
-    'https://raw.githubusercontent.com/FelipeGFA/extensoes/refs/heads/repo/index.pb';
-
-/// MangaDock legacy Tachiyomi JSON extension store.
-const kMangaDockStoreUrl =
-    'https://raw.githubusercontent.com/dddinmx/MangaDock-extensions/main/index.min.json';
-
 /// Aidoku Community Sources JSON store.
 const kAidokuCommunityStoreUrl =
     'https://aidoku-community.github.io/sources/index.min.json';
-
-/// MangaDock Aidoku Sources JSON store.
-const kMangaDockAidokuStoreUrl =
-    'https://raw.githubusercontent.com/dddinmx/MangaDock-extensions/main/aidoku/index.min.json';
 
 /// Mangayomi Manga Extensions JSON store.
 const kMangayomiMangaStoreUrl =
@@ -62,6 +46,50 @@ const kLnReaderNovelStoreUrl =
 /// Livid96 Aniyomi Adult Extensions store (18+ / NSFW).
 const kLividAdultVideoStoreUrl =
     'https://raw.githubusercontent.com/Livid96/Aniyomi-Adult-Extensions/main/index.min.json';
+
+/// Returns true if [url] is one of the legacy redundant mirror URLs that
+/// duplicate Keiyoushi or Aidoku Community.
+bool isRedundantDuplicateStoreUrl(String url) {
+  final lower = url.trim().toLowerCase();
+  return lower == kKeiyoushiLegacyGithubUrl.toLowerCase() ||
+      lower.contains('mo350az/extensions-no-nsfw') ||
+      lower.contains('felipegfa/extensoes') ||
+      lower.contains('dddinmx/mangadock-extensions');
+}
+
+/// Normalizes an extension store URL so equivalent URLs (e.g. github.com/raw vs
+/// raw.githubusercontent.com, /refs/heads/, or repo.json vs index.min.json vs
+/// index.pb) compare equal and are never duplicated.
+String normalizeExtensionStoreUrl(String url) {
+  var u = url.trim().toLowerCase();
+  if (u.endsWith('/')) u = u.substring(0, u.length - 1);
+  u = u.replaceFirst(
+    'https://github.com/keiyoushi/extensions/raw/repo/',
+    'https://raw.githubusercontent.com/keiyoushi/extensions/repo/',
+  );
+  u = u.replaceAll('/refs/heads/', '/');
+  for (final suffix in ['/repo.json', '/index.min.json', '/index.pb']) {
+    if (u.endsWith(suffix)) {
+      u = '${u.substring(0, u.length - suffix.length)}/_store_index_';
+      break;
+    }
+  }
+  return u;
+}
+
+bool isExtensionStoreUrlPresent(
+  String candidateUrl,
+  Iterable<String> existingUrls,
+) {
+  final target = normalizeExtensionStoreUrl(candidateUrl);
+  for (final existing in existingUrls) {
+    if (existing.trim() == candidateUrl.trim() ||
+        normalizeExtensionStoreUrl(existing) == target) {
+      return true;
+    }
+  }
+  return false;
+}
 
 class CuratedStoreSpec {
   const CuratedStoreSpec({
@@ -111,20 +139,6 @@ const List<CuratedStoreSpec> kCuratedExtensionStores = [
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Extensions No NSFW Store (Default)',
-    subtitle: 'Safe-only Manga & Comic extensions (MO350AZ)',
-    indexUrl: kNoNsfwRepoUrl,
-    category: ResourceCategory.manga,
-    isDefault: true,
-  ),
-  CuratedStoreSpec(
-    name: 'FelipeGFA Extensions Store (Default)',
-    subtitle: 'Global & Portuguese Manga/Comic extensions',
-    indexUrl: kFelipeGfaStoreUrl,
-    category: ResourceCategory.manga,
-    isDefault: true,
-  ),
-  CuratedStoreSpec(
     name: 'Aidoku Community Sources (Default)',
     subtitle: 'Aidoku multi-language Manga & Comic sources',
     indexUrl: kAidokuCommunityStoreUrl,
@@ -144,26 +158,6 @@ const List<CuratedStoreSpec> kCuratedExtensionStores = [
     indexUrl: kMangayomiAnimeStoreUrl,
     category: ResourceCategory.videos,
     isDefault: true,
-  ),
-  CuratedStoreSpec(
-    name: 'MangaDock Extensions Store (Default)',
-    subtitle: 'MangaDock Tachiyomi extensions',
-    indexUrl: kMangaDockStoreUrl,
-    category: ResourceCategory.manga,
-    isDefault: true,
-  ),
-  CuratedStoreSpec(
-    name: 'MangaDock Aidoku Sources (Default)',
-    subtitle: 'MangaDock Aidoku source index',
-    indexUrl: kMangaDockAidokuStoreUrl,
-    category: ResourceCategory.other,
-    isDefault: true,
-  ),
-  CuratedStoreSpec(
-    name: 'Keiyoushi Raw Mirror Store',
-    subtitle: 'Raw GitHub mirror for Keiyoushi extensions',
-    indexUrl: kKeiyoushiRawStoreUrl,
-    category: ResourceCategory.manga,
   ),
   CuratedStoreSpec(
     name: 'Aniyomi Adult Video Extensions (18+)',

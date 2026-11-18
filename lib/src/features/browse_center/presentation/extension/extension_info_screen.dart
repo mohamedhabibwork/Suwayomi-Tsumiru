@@ -8,10 +8,12 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/server_image.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../data/source_repository/source_repository.dart';
 import '../../domain/content_rating.dart';
 import '../../domain/extension/extension_model.dart';
 import '../../domain/source/source_model.dart';
 import '../source/controller/source_controller.dart';
+import 'controller/extension_actions.dart';
 import 'controller/extension_controller.dart';
 import 'widgets/extension_list_tile.dart';
 
@@ -64,6 +66,28 @@ class ExtensionInfoScreen extends HookConsumerWidget {
               title: Text(context.l10n.extensionLibrary),
               trailing: Text(extension.extensionLib!),
             ),
+          if (extension.isInstalled.ifNull())
+            Builder(
+              builder: (context) {
+                final disabledList =
+                    ref.watch(disabledExtensionsProvider) ?? const <String>[];
+                final isEnabled = !disabledList.any(
+                  (pkg) =>
+                      pkg.trim().toLowerCase() ==
+                      extension.pkgName.trim().toLowerCase(),
+                );
+                return SwitchListTile.adaptive(
+                  title: const Text('Extension Enabled'),
+                  subtitle: const Text(
+                    'Enable or disable all sources in this extension without uninstalling',
+                  ),
+                  value: isEnabled,
+                  onChanged: (val) => ref
+                      .read(extensionActionsProvider)
+                      .setExtensionEnabled(extension.pkgName, val),
+                );
+              },
+            ),
           Align(
             alignment: Alignment.centerLeft,
             child: ExtensionListTileTailing(
@@ -110,6 +134,21 @@ class ExtensionInfoScreen extends HookConsumerWidget {
                                 sourceId: source.id,
                               ).push(context),
                             ),
+                          SizedBox(
+                            height: 32,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Switch.adaptive(
+                                value: !source.isHidden,
+                                onChanged: (val) async {
+                                  await ref
+                                      .read(sourceRepositoryProvider)
+                                      .setSourceHidden(source.id, !val);
+                                  ref.invalidate(sourceListProvider);
+                                },
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),

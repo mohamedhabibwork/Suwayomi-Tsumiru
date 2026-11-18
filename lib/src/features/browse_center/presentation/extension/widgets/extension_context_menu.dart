@@ -21,6 +21,7 @@ import '../../../../manga_book/presentation/manga_details/widgets/chapter_contex
 import '../../../domain/extension/extension_model.dart';
 import '../../source/controller/source_controller.dart';
 import '../controller/extension_actions.dart';
+import '../controller/extension_controller.dart';
 import 'extension_info_dialog.dart';
 
 Future<void> showExtensionContextMenu({
@@ -53,6 +54,12 @@ Future<void> showExtensionContextMenu({
   final canUninstall = access.allows(Enum$UserPermission.UNINSTALL_EXTENSIONS);
   final installed = extension.isInstalled.ifNull();
   final hasUpdate = extension.hasUpdate.ifNull();
+  final disabledList =
+      ref.read(disabledExtensionsProvider) ?? const <String>[];
+  final isEnabled = !disabledList.any(
+    (pkg) =>
+        pkg.trim().toLowerCase() == extension.pkgName.trim().toLowerCase(),
+  );
 
   final configurableSources =
       ref.read(sourceListProvider).value?.where((s) {
@@ -93,6 +100,18 @@ Future<void> showExtensionContextMenu({
           ),
         ),
       if (installed) ...[
+        PopupMenuItem(
+          onTap: () => guard(
+            (actions) =>
+                actions.setExtensionEnabled(extension.pkgName, !isEnabled),
+          ),
+          child: ChapterMenuRow(
+            icon: isEnabled
+                ? FluentIcons.dismiss_circle_24_regular
+                : FluentIcons.checkmark_circle_24_regular,
+            label: isEnabled ? 'Disable Extension' : 'Enable Extension',
+          ),
+        ),
         PopupMenuItem(
           enabled: canInstall && canUninstall,
           onTap: () => guard(

@@ -281,7 +281,11 @@ enum DBKeys {
   hideBottomTabLabels(false),
   autoHideNsfwOnClose(true),
   blockScreenshots(true),
-  disableSaveImages(true);
+  disableSaveImages(true),
+  onlyNsfwMode(false),
+  disabledExtensions(<String>[]),
+  disabledExtensionStores(<String>[]),
+  crashlyticsEnabled(true);
 
   const DBKeys(this.initial);
 

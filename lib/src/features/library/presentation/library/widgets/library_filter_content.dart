@@ -17,6 +17,7 @@ import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
 import '../../../../../widgets/fluent_expansion_tile.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../../tracking/data/tracker_repository.dart';
 import '../../category/controller/edit_category_controller.dart';
 import '../controller/category_library_options.dart';
@@ -234,8 +235,24 @@ class LibraryFilterSegments extends ConsumerWidget {
         LibraryTriStateSegment(
           heading: context.l10n.filterShortLewd,
           provider: libraryMangaFilterLewdProvider,
-          onChanged: ref.read(libraryMangaFilterLewdProvider.notifier).update,
+          onChanged: (next) async {
+            if (next == true) {
+              final ok = await setOnlyNsfwMode(ref, true);
+              if (!ok) return;
+              ref.read(libraryMangaFilterLewdProvider.notifier).update(true);
+            } else if (next == false) {
+              ref.read(onlyNsfwModeProvider.notifier).update(false);
+              ref.read(libraryMangaFilterLewdProvider.notifier).update(false);
+            } else {
+              final ok = await setNsfwEnabled(ref, true);
+              if (!ok) return;
+              ref.read(onlyNsfwModeProvider.notifier).update(false);
+              ref.read(libraryMangaFilterLewdProvider.notifier).update(null);
+            }
+          },
         ),
+        const ShowNSFWTile(),
+        const OnlyNsfwModeTile(),
         LibraryTriStateSegment(
           heading: context.l10n.duplicateChapters,
           provider: activeLibraryOptionsProvider.select((v) => v.duplicate),
@@ -278,6 +295,7 @@ void resetLibraryFilters(WidgetRef ref) {
   ref.read(libraryMangaFilterBookmarkedProvider.notifier).update(null);
   ref.read(libraryMangaFilterCompletedProvider.notifier).update(null);
   ref.read(libraryMangaFilterLewdProvider.notifier).update(null);
+  ref.read(onlyNsfwModeProvider.notifier).update(false);
   ref.read(libraryMangaFilterMinRatingProvider.notifier).update(0);
   ref.read(libraryFilterCategoriesProvider.notifier).update(false);
   ref.read(libraryFilterCategoriesIncludeProvider.notifier).update(const []);

@@ -49,10 +49,48 @@ void lockNsfwOnAppClose(WidgetRef ref) {
   final autoHide = ref.read(autoHideNsfwOnCloseProvider) ?? true;
   if (!autoHide) return;
   _nsfwSessionFaceIdUnlocked = false;
+  if (ref.read(onlyNsfwModeProvider).ifNull(false)) {
+    ref.read(onlyNsfwModeProvider.notifier).update(false);
+  }
   if (ref.read(showNSFWProvider).ifNull(false)) {
     ref.read(showNSFWProvider.notifier).update(false);
     AppTelemetry.logNsfwToggle(enabled: false, trigger: 'app_close_auto_hide');
   }
+}
+
+/// Toggles +18 content on/off, requiring Face ID when enabling and automatically
+/// turning off [onlyNsfwModeProvider] when disabling.
+Future<bool> setNsfwEnabled(WidgetRef ref, bool enable) async {
+  if (!enable) {
+    ref.read(onlyNsfwModeProvider.notifier).update(false);
+    ref.read(showNSFWProvider.notifier).update(false);
+    return true;
+  }
+  final ok = await verifyNsfwFaceId(
+    reason: 'Authenticate with Face ID to view 18+ / NSFW content',
+  );
+  if (!ok) return false;
+  ref.read(showNSFWProvider.notifier).update(true);
+  return true;
+}
+
+/// Toggles "Show Only +18" (+18 Mode), automatically enabling [showNSFWProvider]
+/// (with Face ID verification if not yet enabled) when turned on.
+Future<bool> setOnlyNsfwMode(WidgetRef ref, bool onlyNsfw) async {
+  if (!onlyNsfw) {
+    ref.read(onlyNsfwModeProvider.notifier).update(false);
+    return true;
+  }
+  final currentlyEnabled = ref.read(showNSFWProvider).ifNull(false);
+  if (!currentlyEnabled) {
+    final ok = await verifyNsfwFaceId(
+      reason: 'Authenticate with Face ID to enable +18 Only Mode',
+    );
+    if (!ok) return false;
+    ref.read(showNSFWProvider.notifier).update(true);
+  }
+  ref.read(onlyNsfwModeProvider.notifier).update(true);
+  return true;
 }
 
 @Riverpod(keepAlive: true)
@@ -70,9 +108,30 @@ class ShowNSFW extends _$ShowNSFW with SharedPreferenceClientMixin<bool> {
     final enabled = value ?? false;
     _nsfwSessionFaceIdUnlocked = enabled;
     super.update(enabled);
+    if (!enabled) {
+      try {
+        ref.read(onlyNsfwModeProvider.notifier).update(false);
+      } catch (_) {}
+    }
     AppTelemetry.logNsfwToggle(enabled: enabled, trigger: 'user_switch');
   }
 }
+
+class OnlyNsfwModeNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() {
+    final saved = initialize(DBKeys.onlyNsfwMode) ?? false;
+    final nsfwEnabled = ref.watch(showNSFWProvider).ifNull(false);
+    if (!nsfwEnabled) return false;
+    return saved;
+  }
+}
+
+final onlyNsfwModeProvider =
+    NotifierProvider<OnlyNsfwModeNotifier, bool?>(
+      OnlyNsfwModeNotifier.new,
+    );
 
 class AutoHideNsfwOnClose extends Notifier<bool?>
     with SharedPreferenceClientMixin<bool> {
@@ -94,18 +153,54 @@ class ShowNSFWTile extends ConsumerWidget {
       controlAffinity: ListTileControlAffinity.trailing,
       title: Text(context.l10n.nsfw),
       subtitle: const Text('Requires Face ID to unlock 18+ sources & history'),
-      onChanged: (nextValue) async {
-        if (!nextValue) {
-          ref.read(showNSFWProvider.notifier).update(false);
-          return;
-        }
-        final ok = await verifyNsfwFaceId(
-          reason: 'Authenticate with Face ID to view 18+ / NSFW content',
-        );
-        if (!ok) return;
-        ref.read(showNSFWProvider.notifier).update(true);
-      },
+      onChanged: (nextValue) => setNsfwEnabled(ref, nextValue),
       value: isEnabled,
+    );
+  }
+}
+
+class OnlyNsfwModeTile extends ConsumerWidget {
+  const OnlyNsfwModeTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('+18 Mode (Show Only +18)'),
+      subtitle: const Text(
+        'Filter sources, extensions, library & history to show only +18 content',
+      ),
+      value: onlyNsfw,
+      onChanged: (nextValue) => setOnlyNsfwMode(ref, nextValue),
+    );
+  }
+}
+
+/// Compact row of linked +18 and Only +18 FilterChips for filter bars & dialogs.
+class NsfwFilterChipsRow extends ConsumerWidget {
+  const NsfwFilterChipsRow({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    return Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        FilterChip(
+          selected: showNsfw,
+          label: const Text('+18 Enabled'),
+          onSelected: (v) => setNsfwEnabled(ref, v),
+        ),
+        FilterChip(
+          selected: onlyNsfw,
+          label: const Text('Only +18'),
+          onSelected: (v) => setOnlyNsfwMode(ref, v),
+        ),
+      ],
     );
   }
 }

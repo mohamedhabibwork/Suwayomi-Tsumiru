@@ -4,11 +4,15 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../analytics/firebase_telemetry_service.dart';
 import '../network/graphql_errors.dart';
 import 'diagnostics.dart';
 import 'redact_tokens.dart';
+import 'rustrak_service.dart';
 
 /// Log failures caught by Riverpod, excluding connection errors; deduplicate per provider/error per session.
 final class ProviderFailureLogger extends ProviderObserver {
@@ -34,6 +38,22 @@ final class ProviderFailureLogger extends ProviderObserver {
       redactTokens(
         '[${_now().toIso8601String()}] provider-failed: $label\n'
         '${error.runtimeType}: $error\n$stackTrace\n\n',
+      ),
+    );
+    unawaited(
+      AppTelemetry.recordError(
+        error,
+        stackTrace,
+        reason: 'ProviderFailure: $label',
+        fatal: false,
+      ),
+    );
+    unawaited(
+      RustrakService.captureException(
+        error,
+        stackTrace: stackTrace,
+        culprit: label,
+        tags: {'provider': label},
       ),
     );
   }

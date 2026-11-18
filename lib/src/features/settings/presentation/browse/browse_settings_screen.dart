@@ -141,6 +141,10 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           id: 'showNsfw',
                           child: ShowNSFWTile(),
                         ),
+                        const SettingsHighlightTarget(
+                          id: 'onlyNsfwMode',
+                          child: OnlyNsfwModeTile(),
+                        ),
                         const AutoHideNsfwOnCloseTile(),
                       ],
                     ),

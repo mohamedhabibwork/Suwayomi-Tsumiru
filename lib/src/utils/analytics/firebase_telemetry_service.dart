@@ -13,7 +13,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../firebase_options.dart';
 import '../../features/notifications/data/local_notification_service.dart';
 import '../../routes/router_config.dart';
 
@@ -22,9 +21,7 @@ import '../../routes/router_config.dart';
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     if (Firebase.apps.isEmpty) {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      await Firebase.initializeApp();
     }
     final notification = message.notification;
     final data = message.data;
@@ -81,17 +78,15 @@ class AppTelemetry {
   /// Callback invoked when a foreground/opened FCM notification requests navigation.
   static void Function(String route)? onNavigateRequested;
 
-  /// Initializes Firebase Core, Analytics, and Cloud Messaging across iOS, Android, and Web.
+  /// Initializes Firebase Core, Analytics, and Cloud Messaging on mobile (iOS/Android).
   static Future<void> init({
     String? appVersion,
     String? buildNumber,
   }) async {
-    if (_initialized) return;
+    if (_initialized || kIsWeb) return;
     try {
       if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        );
+        await Firebase.initializeApp();
       }
       _analytics = FirebaseAnalytics.instance;
       await _analytics?.setAnalyticsCollectionEnabled(_analyticsEnabled);

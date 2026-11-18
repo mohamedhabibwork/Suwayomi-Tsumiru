@@ -84,3 +84,9 @@ flatpak/bundle/
 /flatpak/flathub/build/
 /flatpak/flathub/repo/
 /flatpak/flathub/.flatpak-builder/
+
+# Firebase SDK configuration files (local only, never committed to git)
+ios/Runner/GoogleService-Info.plist
+android/app/google-services.json
+lib/firebase_options.dart
+web/firebase-messaging-sw.js

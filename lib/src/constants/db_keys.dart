@@ -107,7 +107,7 @@ enum DBKeys {
   sourceDisplayMode(DisplayMode.grid),
   globalSearchSourceFilter(GlobalSearchSourceFilter.pinned),
   gridMangaCoverMinWidth(128.0),
-  readerOverlay(false),
+  readerOverlay(true),
   readerFeedbackToasts(true),
   volumeTap(false),
   volumeTapInvert(false),

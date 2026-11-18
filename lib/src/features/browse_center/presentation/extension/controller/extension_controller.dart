@@ -17,6 +17,11 @@ import '../../../domain/extension/extension_model.dart';
 
 part 'extension_controller.g.dart';
 
+String normalizeExtensionLang(Extension e) {
+  final raw = (e.language?.code ?? e.lang).trim().toLowerCase();
+  return raw.isEmpty ? 'other' : raw;
+}
+
 @riverpod
 Future<List<Extension>?> extension(Ref ref) {
   final result =
@@ -49,7 +54,7 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
       }
     } else {
       extensionMap.update(
-        e.language?.code?.toLowerCase() ?? "other",
+        normalizeExtensionLang(e),
         (value) => [...value, e],
         ifAbsent: () => [e],
       );
@@ -57,17 +62,26 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
   }
   for (final list in extensionMap.values) {
     list.sort(
-        (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
   }
   return extensionListData.copyWithData((p0) => extensionMap);
 }
 
 @riverpod
 List<String> extensionFilterLangList(Ref ref) {
-  final extensionMap = {...?ref.watch(extensionMapProvider).value};
-  extensionMap.remove("installed");
-  extensionMap.remove("update");
-  return [...extensionMap.keys]..sort();
+  final extensionList = [...?ref.watch(extensionProvider).value];
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final codes = <String>{};
+  for (final e in extensionList) {
+    if (!showNsfw && isNsfwFromWarning(e.contentWarning)) continue;
+    codes.add(normalizeExtensionLang(e));
+  }
+  final mapKeys = {...?ref.watch(extensionMapProvider).value?.keys};
+  mapKeys.remove("installed");
+  mapKeys.remove("update");
+  codes.addAll(mapKeys.map((k) => k.toLowerCase()));
+  return codes.toList()..sort();
 }
 
 @riverpod
@@ -82,9 +96,34 @@ AsyncValue<Map<String, List<Extension>>> extensionMapFiltered(Ref ref) {
   final extensionMapFiltered = <String, List<Extension>>{};
   final extensionMapData = ref.watch(extensionMapProvider);
   final extensionMap = {...?extensionMapData.value};
-  final enabledLangList = [...?ref.watch(extensionLanguageFilterProvider)];
-  for (final e in enabledLangList) {
-    if (extensionMap.containsKey(e)) extensionMapFiltered[e] = extensionMap[e]!;
+  final rawEnabled = ref.watch(extensionLanguageFilterProvider) ??
+      const <String>['installed', 'update', 'en', 'all'];
+  final enabledSet = {
+    for (final code in rawEnabled) code.trim().toLowerCase(),
+  };
+  final enabledContentLangs = {
+    for (final code in enabledSet)
+      if (code != 'installed' && code != 'update') code,
+  };
+
+  bool matchesSelectedLangs(Extension ext) {
+    if (enabledContentLangs.isEmpty) return false;
+    final lang = normalizeExtensionLang(ext);
+    return enabledContentLangs.contains(lang);
+  }
+
+  for (final entry in extensionMap.entries) {
+    final keyLower = entry.key.toLowerCase();
+    if (keyLower == 'installed' || keyLower == 'update') {
+      if (enabledSet.contains(keyLower) || enabledContentLangs.isNotEmpty) {
+        final filtered = entry.value.where(matchesSelectedLangs).toList();
+        if (filtered.isNotEmpty) {
+          extensionMapFiltered[entry.key] = filtered;
+        }
+      }
+    } else if (enabledContentLangs.contains(keyLower)) {
+      extensionMapFiltered[keyLower] = entry.value;
+    }
   }
   return extensionMapData.copyWithData((p0) => extensionMapFiltered);
 }

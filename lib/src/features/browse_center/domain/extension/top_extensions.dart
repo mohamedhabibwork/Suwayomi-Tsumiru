@@ -353,34 +353,63 @@ const List<({String label, List<String> matchTerms})> kTopNovelExtensionSpecs = 
   (label: 'ArNovel', matchTerms: ['arnovel', 'kolnovel']),
 ];
 
+bool _matchesEnabledLangs(Extension e, Set<String>? enabledLanguages) {
+  final lang = (e.language?.code ?? e.lang).trim().toLowerCase();
+  if (enabledLanguages == null) {
+    return lang == 'en' || lang == 'all';
+  }
+  final contentLangs = {
+    for (final c in enabledLanguages)
+      if (c != 'installed' && c != 'update') c.toLowerCase(),
+  };
+  if (contentLangs.isEmpty) return false;
+  return contentLangs.contains(lang);
+}
+
 /// Selects up to one matching extension per curated Top 10 entry,
-/// preferring English (`en`) or multi-language (`all`) extensions.
-List<Extension> selectTop10Extensions(Iterable<Extension> extensions) {
+/// respecting [enabledLanguages] when provided.
+List<Extension> selectTop10Extensions(
+  Iterable<Extension> extensions, {
+  Set<String>? enabledLanguages,
+}) {
   final pool = extensions
       .where(
         (e) =>
             !isVideoExtension(e) &&
             !isNovelExtension(e) &&
-            (e.lang == 'en' || e.lang == 'all'),
+            _matchesEnabledLangs(e, enabledLanguages),
       )
       .toList();
-  return _pickMatchingExtensions(pool, kTop10ExtensionSpecs);
+  final picked = _pickMatchingExtensions(pool, kTop10ExtensionSpecs);
+  if (picked.length >= 6) return picked;
+  final seen = {for (final e in picked) e.pkgName};
+  for (final ext in pool) {
+    if (seen.add(ext.pkgName)) {
+      picked.add(ext);
+      if (picked.length >= 10) break;
+    }
+  }
+  return picked;
 }
 
 /// Selects top Video & Anime extensions that install as real sources.
-List<Extension> selectTopVideoExtensions(Iterable<Extension> extensions) {
-  final videoPool = extensions.where(isVideoExtension).toList();
-  if (videoPool.isEmpty) return const <Extension>[];
-  final preferred = videoPool
-      .where((e) => e.lang == 'en' || e.lang == 'all')
+List<Extension> selectTopVideoExtensions(
+  Iterable<Extension> extensions, {
+  Set<String>? enabledLanguages,
+}) {
+  final videoPool = extensions
+      .where(
+        (e) => isVideoExtension(e) && _matchesEnabledLangs(e, enabledLanguages),
+      )
       .toList();
+  if (videoPool.isEmpty) return const <Extension>[];
   final picked = _pickMatchingExtensions(
-    preferred.isNotEmpty ? preferred : videoPool,
+    videoPool,
     kTopVideoExtensionSpecs,
   );
   if (picked.length >= 6) return picked;
   final seen = {for (final e in picked) e.pkgName};
-  for (final ext in (preferred.isNotEmpty ? preferred : videoPool)) {
+  for (final ext in videoPool) {
     if (seen.add(ext.pkgName)) {
       picked.add(ext);
       if (picked.length >= 10) break;
@@ -390,19 +419,23 @@ List<Extension> selectTopVideoExtensions(Iterable<Extension> extensions) {
 }
 
 /// Selects top Novel & Book extensions that install as real sources.
-List<Extension> selectTopNovelExtensions(Iterable<Extension> extensions) {
-  final novelPool = extensions.where(isNovelExtension).toList();
-  if (novelPool.isEmpty) return const <Extension>[];
-  final preferred = novelPool
-      .where((e) => e.lang == 'en' || e.lang == 'all' || e.lang == 'ar')
+List<Extension> selectTopNovelExtensions(
+  Iterable<Extension> extensions, {
+  Set<String>? enabledLanguages,
+}) {
+  final novelPool = extensions
+      .where(
+        (e) => isNovelExtension(e) && _matchesEnabledLangs(e, enabledLanguages),
+      )
       .toList();
+  if (novelPool.isEmpty) return const <Extension>[];
   final picked = _pickMatchingExtensions(
-    preferred.isNotEmpty ? preferred : novelPool,
+    novelPool,
     kTopNovelExtensionSpecs,
   );
   if (picked.length >= 6) return picked;
   final seen = {for (final e in picked) e.pkgName};
-  for (final ext in (preferred.isNotEmpty ? preferred : novelPool)) {
+  for (final ext in novelPool) {
     if (seen.add(ext.pkgName)) {
       picked.add(ext);
       if (picked.length >= 10) break;

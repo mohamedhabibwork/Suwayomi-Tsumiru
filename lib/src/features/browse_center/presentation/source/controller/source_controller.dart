@@ -17,6 +17,11 @@ import '../../../domain/source/source_model.dart';
 
 part 'source_controller.g.dart';
 
+String normalizeSourceLang(SourceDto s) {
+  final raw = (s.language?.code ?? s.lang).trim().toLowerCase();
+  return raw.isEmpty ? 'other' : raw;
+}
+
 @riverpod
 Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
@@ -45,7 +50,7 @@ int _byName(SourceDto a, SourceDto b) =>
 List<SourceDto> pinnedSourcesFrom(List<SourceDto> sources) =>
     [...sources.where((e) => e.isPinned)]..sort(_byName);
 
-/// Groups non-pinned sources by language, with a separate last-used bucket; sorts each by name.
+/// Groups non-pinned sources by normalized lowercase language code, with a separate last-used bucket; sorts each by name.
 Map<String, List<SourceDto>> groupSourcesByLanguage(
   List<SourceDto> sources,
   String? lastUsedId,
@@ -54,7 +59,7 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
   for (final e in sources) {
     if (!e.isPinned) {
       sourceMap.update(
-        e.language?.code ?? "other",
+        normalizeSourceLang(e),
         (value) => [...value, e],
         ifAbsent: () => [e],
       );
@@ -67,10 +72,26 @@ Map<String, List<SourceDto>> groupSourcesByLanguage(
   return sourceMap;
 }
 
-/// Pinned sources ignore the active language filter.
+/// Pinned sources filtered by the active language filter when languages are selected.
 @riverpod
-List<SourceDto> pinnedSources(Ref ref) => pinnedSourcesFrom(
-    ref.watch(browsableSourceListProvider).value ?? const []);
+List<SourceDto> pinnedSources(Ref ref) {
+  final allPinned = pinnedSourcesFrom(
+    ref.watch(browsableSourceListProvider).value ?? const [],
+  );
+  final rawEnabled = ref.watch(sourceLanguageFilterProvider);
+  if (rawEnabled == null) return allPinned;
+  final enabledContentLangs = {
+    for (final c in rawEnabled)
+      if (c.toLowerCase() != 'lastused' &&
+          c.toLowerCase() != 'localsourcelang')
+        c.trim().toLowerCase(),
+  };
+  if (enabledContentLangs.isEmpty) return const <SourceDto>[];
+  return [
+    for (final s in allPinned)
+      if (enabledContentLangs.contains(normalizeSourceLang(s))) s,
+  ];
+}
 
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
@@ -81,14 +102,14 @@ AsyncValue<Map<String, List<SourceDto>>> sourceMap(Ref ref) {
   );
 }
 
-/// Includes hidden and pinned sources, grouped by language and sorted by visibility then name.
+/// Includes hidden and pinned sources, grouped by lowercase language and sorted by visibility then name.
 Map<String, List<SourceDto>> groupAllSourcesByLanguage(
   List<SourceDto> sources,
 ) {
   final sourceMap = <String, List<SourceDto>>{};
   for (final e in sources) {
     sourceMap.update(
-      e.language?.code ?? "other",
+      normalizeSourceLang(e),
       (value) => [...value, e],
       ifAbsent: () => [e],
     );
@@ -101,7 +122,7 @@ Map<String, List<SourceDto>> groupAllSourcesByLanguage(
   return sourceMap;
 }
 
-/// Includes hidden sources so the filter screen can unhide them.
+/// Includes hidden and pinned sources so the filter screen & language dialog can see every language.
 @riverpod
 AsyncValue<Map<String, List<SourceDto>>> allSourcesByLanguage(Ref ref) {
   final sourceListData = ref.watch(visibleSourceListProvider);
@@ -114,23 +135,42 @@ AsyncValue<Map<String, List<SourceDto>>> allSourcesByLanguage(Ref ref) {
 class SourceFilterLangMap extends _$SourceFilterLangMap {
   @override
   Map<String, bool> build() {
+    final allMap = {...?ref.watch(allSourcesByLanguageProvider).value};
     final sourceMap = {...?ref.watch(sourceMapProvider).value};
     final enabledLanguages = ref.watch(sourceLanguageFilterProvider);
-    sourceMap.remove("lastUsed");
-    sourceMap.remove("localsourcelang");
+    final enabledSet = {
+      for (final c in enabledLanguages ?? const <String>[])
+        c.trim().toLowerCase(),
+    };
+    final keys = <String>{
+      ...allMap.keys.map((k) => k.toLowerCase()),
+      ...sourceMap.keys.map((k) => k.toLowerCase()),
+    }
+      ..remove("lastused")
+      ..remove("lastUsed")
+      ..remove("localsourcelang");
     return Map.fromIterable(
-      [...sourceMap.keys],
-      value: (element) => (enabledLanguages?.contains(element)).ifNull(),
+      keys,
+      value: (element) => enabledSet.contains((element as String).toLowerCase()),
     );
   }
 
   void toggleLang(String langCode, bool value) {
+    final target = langCode.trim().toLowerCase();
     if (!value) {
       ref.read(sourceLanguageFilterProvider.notifier).updateWithPreviousState(
-          (enabledLanguages) => [...?enabledLanguages]..remove(langCode));
+            (enabledLanguages) => [
+              for (final c in enabledLanguages ?? const <String>[])
+                if (c.trim().toLowerCase() != target) c.trim().toLowerCase(),
+            ],
+          );
     } else {
       ref.read(sourceLanguageFilterProvider.notifier).updateWithPreviousState(
-            (enabledLanguages) => {...?enabledLanguages, langCode}.toList(),
+            (enabledLanguages) => {
+              for (final c in enabledLanguages ?? const <String>[])
+                c.trim().toLowerCase(),
+              target,
+            }.toList(),
           );
     }
   }
@@ -141,9 +181,36 @@ AsyncValue<Map<String, List<SourceDto>>?> sourceMapFiltered(Ref ref) {
   final sourceMapFiltered = <String, List<SourceDto>>{};
   final sourceMapData = ref.watch(sourceMapProvider);
   final sourceMap = {...?sourceMapData.value};
-  final enabledLangList = [...?ref.watch(sourceLanguageFilterProvider)]..sort();
-  for (final e in enabledLangList) {
-    if (sourceMap.containsKey(e)) sourceMapFiltered[e] = sourceMap[e]!;
+  final rawEnabled = ref.watch(sourceLanguageFilterProvider) ??
+      const <String>['all', 'lastUsed', 'en', 'localsourcelang'];
+  final enabledSet = {
+    for (final c in rawEnabled) c.trim().toLowerCase(),
+  };
+  final enabledContentLangs = {
+    for (final c in enabledSet)
+      if (c != 'lastused' && c != 'localsourcelang') c,
+  };
+
+  for (final entry in sourceMap.entries) {
+    final key = entry.key;
+    final keyLower = key.toLowerCase();
+    if (key == 'lastUsed' || keyLower == 'lastused') {
+      if (enabledSet.contains('lastused') || enabledSet.contains('lastUsed')) {
+        final filtered = [
+          for (final s in entry.value)
+            if (enabledContentLangs.contains(normalizeSourceLang(s))) s,
+        ];
+        if (filtered.isNotEmpty) {
+          sourceMapFiltered['lastUsed'] = filtered;
+        }
+      }
+    } else if (keyLower == 'localsourcelang') {
+      if (enabledSet.contains('localsourcelang') && enabledContentLangs.isNotEmpty) {
+        sourceMapFiltered['localsourcelang'] = entry.value;
+      }
+    } else if (enabledContentLangs.contains(keyLower)) {
+      sourceMapFiltered[keyLower] = entry.value;
+    }
   }
   return sourceMapData.copyWithData((e) => sourceMapFiltered);
 }

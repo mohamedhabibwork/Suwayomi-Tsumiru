@@ -87,18 +87,38 @@ class ExtensionActions {
     String? languageCode,
     bool Function() current,
   ) async {
+    String? resolvedLang = languageCode;
+    if (resolvedLang.isBlank) {
+      final list = _ref.read(extensionProvider).value;
+      final match = list?.where((e) => e.pkgName == pkgName).firstOrNull;
+      resolvedLang = match?.lang;
+    }
     await _repository.installExtension(pkgName);
     if (!current()) return;
-    if (languageCode.isNotBlank) _enableSourceLanguage(languageCode!);
+    if (resolvedLang.isNotBlank) _enableSourceLanguage(resolvedLang!);
   }
 
   // An empty saved filter means all languages were deliberately disabled.
   void _enableSourceLanguage(String code) {
+    final normalized = code.trim().toLowerCase();
+    if (normalized.isEmpty) return;
     final enabled = _ref.read(sourceLanguageFilterProvider);
-    if (enabled.isNotBlank && !enabled!.contains(code)) {
+    final lowerEnabled = {
+      for (final c in enabled ?? const <String>[]) c.toLowerCase(),
+    };
+    if (!lowerEnabled.contains(normalized)) {
       _ref
           .read(sourceLanguageFilterProvider.notifier)
-          .update({...enabled, code}.toList());
+          .update({...lowerEnabled, normalized}.toList());
+    }
+    final extEnabled = _ref.read(extensionLanguageFilterProvider);
+    final lowerExtEnabled = {
+      for (final c in extEnabled ?? const <String>[]) c.toLowerCase(),
+    };
+    if (!lowerExtEnabled.contains(normalized)) {
+      _ref
+          .read(extensionLanguageFilterProvider.notifier)
+          .update({...lowerExtEnabled, normalized}.toList());
     }
   }
 

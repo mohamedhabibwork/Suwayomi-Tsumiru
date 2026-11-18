@@ -26,11 +26,22 @@ class SourceFilterScreen extends HookConsumerWidget {
   const SourceFilterScreen({super.key});
 
   void _toggleLanguage(WidgetRef ref, String code, bool enable) {
+    final target = code.trim().toLowerCase();
     final notifier = ref.read(sourceLanguageFilterProvider.notifier);
     if (enable) {
-      notifier.updateWithPreviousState((prev) => {...?prev, code}.toList());
+      notifier.updateWithPreviousState(
+        (prev) => {
+          for (final c in prev ?? const <String>[]) c.trim().toLowerCase(),
+          target,
+        }.toList(),
+      );
     } else {
-      notifier.updateWithPreviousState((prev) => [...?prev]..remove(code));
+      notifier.updateWithPreviousState(
+        (prev) => [
+          for (final c in prev ?? const <String>[])
+            if (c.trim().toLowerCase() != target) c.trim().toLowerCase(),
+        ],
+      );
     }
   }
 
@@ -68,7 +79,11 @@ class SourceFilterScreen extends HookConsumerWidget {
         final sourceMap = {...data};
         // The local source is always available in its own Browse bucket.
         sourceMap.remove('localsourcelang');
-        bool isEnabled(String c) => enabledLangs?.contains(c) ?? false;
+        final enabledSet = {
+          for (final c in enabledLangs ?? const <String>[])
+            c.trim().toLowerCase(),
+        };
+        bool isEnabled(String c) => enabledSet.contains(c.toLowerCase());
         final languages = sourceMap.keys.toList()
           ..sort((a, b) {
             final ae = isEnabled(a), be = isEnabled(b);
@@ -93,11 +108,11 @@ class SourceFilterScreen extends HookConsumerWidget {
                 SliverToBoxAdapter(
                   child: _LanguageToggle(
                     langCode: lang,
-                    enabled: enabledLangs?.contains(lang) ?? false,
+                    enabled: isEnabled(lang),
                     onChanged: (value) => _toggleLanguage(ref, lang, value),
                   ),
                 ),
-                if (enabledLangs?.contains(lang) ?? false) ...[
+                if (isEnabled(lang)) ...[
                   SliverToBoxAdapter(
                     child: _AllSourcesToggle(
                       langCode: lang,

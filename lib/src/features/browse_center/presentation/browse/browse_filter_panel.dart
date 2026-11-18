@@ -194,7 +194,11 @@ class _ExtensionLanguageChecklist extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final codes = ref.watch(extensionFilterLangListProvider).toList()..sort();
-    final enabled = ref.watch(extensionLanguageFilterProvider);
+    final enabled = ref.watch(extensionLanguageFilterProvider) ??
+        const <String>['installed', 'update', 'en', 'all'];
+    final enabledSet = {
+      for (final c in enabled) c.trim().toLowerCase(),
+    };
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -202,20 +206,20 @@ class _ExtensionLanguageChecklist extends ConsumerWidget {
           Builder(
             builder: (context) {
               final code = raw.toLowerCase();
-              final isOn = enabled?.contains(code) ?? true;
+              final isOn = enabledSet.contains(code);
               return _CheckRow(
                 value: isOn,
                 label: languageMap[code]?.displayName ?? code,
                 onChanged: (value) {
+                  final next = {...enabledSet};
                   if (value) {
-                    ref
-                        .read(extensionLanguageFilterProvider.notifier)
-                        .update({...?enabled, code}.toList());
+                    next.add(code);
                   } else {
-                    ref
-                        .read(extensionLanguageFilterProvider.notifier)
-                        .update([...?enabled]..remove(code));
+                    next.remove(code);
                   }
+                  ref
+                      .read(extensionLanguageFilterProvider.notifier)
+                      .update(next.toList());
                 },
               );
             },

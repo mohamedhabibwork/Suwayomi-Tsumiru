@@ -151,6 +151,10 @@ class ExtensionScreen extends HookConsumerWidget {
     final body = extensionMapData.showUiWhenData(
       context,
       (data) {
+        final enabledLangsList = ref.watch(extensionLanguageFilterProvider);
+        final enabledLangsSet = enabledLangsList != null
+            ? {for (final l in enabledLangsList) l.trim().toLowerCase()}
+            : null;
         final combinedAll = <Extension>[
           ...?extensionMapData.value?["installed"],
           ...?extensionMapData.value?["update"],
@@ -164,17 +168,26 @@ class ExtensionScreen extends HookConsumerWidget {
         final topVideos = query.isBlank &&
                 (activeCategory == ResourceCategory.all ||
                     activeCategory == ResourceCategory.videos)
-            ? selectTopVideoExtensions(combinedAll)
+            ? selectTopVideoExtensions(
+                combinedAll,
+                enabledLanguages: enabledLangsSet,
+              )
             : const <Extension>[];
         final topNovels = query.isBlank &&
                 (activeCategory == ResourceCategory.all ||
                     activeCategory == ResourceCategory.novels)
-            ? selectTopNovelExtensions(combinedAll)
+            ? selectTopNovelExtensions(
+                combinedAll,
+                enabledLanguages: enabledLangsSet,
+              )
             : const <Extension>[];
         final top10Manga = query.isBlank &&
                 (activeCategory == ResourceCategory.all ||
                     activeCategory == ResourceCategory.manga)
-            ? selectTop10Extensions(combinedAll)
+            ? selectTop10Extensions(
+                combinedAll,
+                enabledLanguages: enabledLangsSet,
+              )
             : const <Extension>[];
 
         final hasVisible =

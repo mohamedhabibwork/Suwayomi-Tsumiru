@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../../../constants/db_keys.dart';
 import '../../../../../../constants/enum.dart';
+import '../../../../../../routes/router_config.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../../utils/theme/brand.dart';
@@ -29,6 +30,17 @@ import 'reader_flash_overlay.dart';
 import 'reader_side_seekbar.dart';
 import 'reader_top_bar.dart';
 import 'reader_utils_bar.dart';
+
+/// Safely exits the reader back to the previous screen or the series details page.
+void exitReaderScreen(BuildContext context, int mangaId) {
+  if (Navigator.of(context).canPop()) {
+    Navigator.of(context).pop();
+  } else if (context.canPop()) {
+    context.pop();
+  } else {
+    MangaRoute(mangaId: mangaId).go(context);
+  }
+}
 
 /// UI mode while the chrome is hidden: fullscreen hides the OS bars; with
 /// fullscreen OFF they stay visible (edgeToEdge) even when the chrome goes.
@@ -223,6 +235,48 @@ class ReaderChrome extends HookConsumerWidget {
                 ),
               ),
 
+            // Always-accessible floating Back button when the top bar is hidden (especially critical for novel/continuous chapters).
+            if (!visible)
+              Positioned(
+                top: MediaQuery.viewPaddingOf(context).top + 8,
+                left: 12,
+                child: Material(
+                  color: readerNavSurface(
+                    context.theme.colorScheme,
+                  ).withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(24),
+                  elevation: 2,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => exitReaderScreen(context, manga.id),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: context.theme.colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            context.l10n.back,
+                            style: context.textTheme.labelMedium?.copyWith(
+                              color: context.theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
             // Measure both top and utils bars so the side seek bar clears expanded controls.
             Positioned(
               top: 0,
@@ -258,7 +312,7 @@ class ReaderChrome extends HookConsumerWidget {
                             currentPage: currentIndex,
                             manga: manga,
                             chapter: chapter,
-                            onBack: () => context.pop(),
+                            onBack: () => exitReaderScreen(context, manga.id),
                           ),
                           if (autoScrollSupported)
                             ReaderUtilsBar(

@@ -343,22 +343,56 @@ class ReaderScreen extends HookConsumerWidget {
           child: manga.showUiWhenData(
             context,
             (data) {
-              if (data == null) return const SizedBox.shrink();
+              if (data == null) {
+                return Scaffold(
+                  appBar: AppBar(
+                    leading: BackButton(
+                      onPressed: () => exitReaderScreen(context, mangaId),
+                    ),
+                  ),
+                  body: const Center(child: CircularProgressIndicator()),
+                );
+              }
               return chapterView.showUiWhenData(
                 context,
                 (chapterData) {
-                  if (chapterData == null) return const SizedBox.shrink();
+                  if (chapterData == null) {
+                    return Scaffold(
+                      appBar: AppBar(
+                        leading: BackButton(
+                          onPressed: () => exitReaderScreen(context, mangaId),
+                        ),
+                      ),
+                      body: const Center(child: CircularProgressIndicator()),
+                    );
+                  }
                   return chapterPagesView.showUiWhenData(
                     context,
                     (chapterPagesData) {
                       if (chapterPagesData == null) {
-                        return const SizedBox.shrink();
+                        return Scaffold(
+                          appBar: AppBar(
+                            leading: BackButton(
+                              onPressed: () =>
+                                  exitReaderScreen(context, mangaId),
+                            ),
+                          ),
+                          body: Emoticons(
+                            title: context.l10n.readerNoPages,
+                            subTitle: context.l10n.readerNoPagesSubtitle,
+                          ),
+                        );
                       }
                       // Empty chapters never mount the reader toolbar, so this view
                       // needs its own back button.
                       if (chapterPagesData.pages.isEmpty) {
                         return Scaffold(
-                          appBar: AppBar(),
+                          appBar: AppBar(
+                            leading: BackButton(
+                              onPressed: () =>
+                                  exitReaderScreen(context, mangaId),
+                            ),
+                          ),
                           body: Emoticons(
                             title: context.l10n.readerNoPages,
                             subTitle: context.l10n.readerNoPagesSubtitle,
@@ -610,9 +644,7 @@ class ReaderScreen extends HookConsumerWidget {
                     refresh: () => ref.refresh(
                       chapterPagesProvider(chapterId: chapterId).future,
                     ),
-                    addScaffoldWrapper:
-                        chapterPagesView.hasError &&
-                        !chapterPagesView.isLoading,
+                    addScaffoldWrapper: true,
                   );
                 },
                 refresh: () => ref.refresh(chapterProviderWithIndex.future),

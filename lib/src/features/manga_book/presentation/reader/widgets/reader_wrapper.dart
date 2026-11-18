@@ -288,7 +288,7 @@ class ReaderWrapper extends HookConsumerWidget {
 
     final sessionVisibility = ref.watch(readerChromeVisibleProvider);
     final visibility = useState(
-      sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(),
+      sessionVisibility ?? ref.read(readerInitialOverlayProvider).ifNull(true),
     );
     final utilsBarExpanded = useState(false);
     final mangaReaderPadding = useState(

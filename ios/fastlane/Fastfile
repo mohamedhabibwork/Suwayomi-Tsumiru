@@ -127,6 +127,17 @@ platform :ios do
             UI.important("Group '#{group.name}' assignment note for build #{build.version}: #{e.message}")
           end
         end
+
+        begin
+          g_with_testers = Spaceship::ConnectAPI::BetaGroup.get(beta_group_id: group.id, includes: "betaTesters").first
+          tester_ids = (g_with_testers&.beta_testers || []).map(&:id)
+          if tester_ids.any?
+            Spaceship::ConnectAPI.add_beta_testers_to_build(build_id: build.id, beta_tester_ids: tester_ids)
+            UI.success("Assigned #{tester_ids.size} individual beta testers directly to build #{build.version}!")
+          end
+        rescue => e
+          UI.important("Individual tester assignment note for build #{build.version}: #{e.message}")
+        end
       end
     end
   end

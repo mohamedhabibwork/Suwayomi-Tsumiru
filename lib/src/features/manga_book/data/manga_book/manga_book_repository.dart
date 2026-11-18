@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/webui_meta/webui_meta_codec.dart';
 import '../../../../utils/webui_meta/webui_meta_repository.dart';
@@ -29,36 +30,49 @@ class MangaBookRepository {
   final GraphQLClient client;
   final OfflineDatabase? Function()? readOfflineDb;
 
-  Future<MangaDto?> addMangaToLibrary(int mangaId) => client
-      .mutate$UpdateManga(
-        Options$Mutation$UpdateManga(
-          variables: Variables$Mutation$UpdateManga(
-            withLibraryFields: false,
-            input: Input$UpdateMangaInput(
-              id: mangaId,
-              patch: Input$UpdateMangaPatchInput(inLibrary: true),
+  Future<MangaDto?> addMangaToLibrary(int mangaId) {
+    AppTelemetry.logMangaLibraryChange(mangaId: mangaId, added: true);
+    return client
+        .mutate$UpdateManga(
+          Options$Mutation$UpdateManga(
+            variables: Variables$Mutation$UpdateManga(
+              withLibraryFields: false,
+              input: Input$UpdateMangaInput(
+                id: mangaId,
+                patch: Input$UpdateMangaPatchInput(inLibrary: true),
+              ),
             ),
           ),
-        ),
-      )
-      .getData((data) => data.updateManga?.manga);
+        )
+        .getData((data) => data.updateManga?.manga);
+  }
 
   /// Returns only server-confirmed IDs; a partial apply may return fewer than [mangaIds].
-  Future<List<int>> addMangasToLibrary(List<int> mangaIds) => client
-      .mutate$UpdateMangas(
-        Options$Mutation$UpdateMangas(
-          variables: Variables$Mutation$UpdateMangas(
-            input: Input$UpdateMangasInput(
-              ids: mangaIds,
-              patch: Input$UpdateMangaPatchInput(inLibrary: true),
+  Future<List<int>> addMangasToLibrary(List<int> mangaIds) {
+    if (mangaIds.isNotEmpty) {
+      AppTelemetry.logMangaLibraryChange(
+        mangaId: mangaIds.first,
+        added: true,
+        count: mangaIds.length,
+      );
+    }
+    return client
+        .mutate$UpdateMangas(
+          Options$Mutation$UpdateMangas(
+            variables: Variables$Mutation$UpdateMangas(
+              input: Input$UpdateMangasInput(
+                ids: mangaIds,
+                patch: Input$UpdateMangaPatchInput(inLibrary: true),
+              ),
             ),
           ),
-        ),
-      )
-      .getData((data) => data.updateMangas?.mangas.map((m) => m.id).toList())
-      .then((ids) => ids ?? const []);
+        )
+        .getData((data) => data.updateMangas?.mangas.map((m) => m.id).toList())
+        .then((ids) => ids ?? const []);
+  }
 
   Future<void> removeMangaFromLibrary(int mangaId) async {
+    AppTelemetry.logMangaLibraryChange(mangaId: mangaId, added: false);
     final metas = await WebUiMetaRepository(client).readGlobalMetas();
     final forget = readWebUiValue(metas, 'removeMangaFromCategories');
     final removed = await client
@@ -83,24 +97,34 @@ class MangaBookRepository {
     }
   }
 
-  Future<void> modifyBulkChapters(ChapterBatch batch) => client
-      .mutate$UpdateChapters(
-        Options$Mutation$UpdateChapters(
-          variables: Variables$Mutation$UpdateChapters(input: batch),
-        ),
-      )
-      .getData((data) {});
-
-  Future<void> deleteChapters(List<int> chapterIds) => client
-      .mutate$DeleteDownloadedChapters(
-        Options$Mutation$DeleteDownloadedChapters(
-          variables: Variables$Mutation$DeleteDownloadedChapters(
-            input: Input$DeleteDownloadedChaptersInput(ids: chapterIds),
+  Future<void> modifyBulkChapters(ChapterBatch batch) {
+    AppTelemetry.logChapterModify(
+      count: batch.ids.length,
+      isRead: batch.patch.isRead,
+      isBookmarked: batch.patch.isBookmarked,
+    );
+    return client
+        .mutate$UpdateChapters(
+          Options$Mutation$UpdateChapters(
+            variables: Variables$Mutation$UpdateChapters(input: batch),
           ),
-        ),
-      )
-      // Throw on server failure so callers do not delete the device copy.
-      .getData((data) {});
+        )
+        .getData((data) {});
+  }
+
+  Future<void> deleteChapters(List<int> chapterIds) {
+    AppTelemetry.logChapterDelete(count: chapterIds.length);
+    return client
+        .mutate$DeleteDownloadedChapters(
+          Options$Mutation$DeleteDownloadedChapters(
+            variables: Variables$Mutation$DeleteDownloadedChapters(
+              input: Input$DeleteDownloadedChaptersInput(ids: chapterIds),
+            ),
+          ),
+        )
+        // Throw on server failure so callers do not delete the device copy.
+        .getData((data) {});
+  }
 
   Future<MangaDto?> getManga({
     required int mangaId,

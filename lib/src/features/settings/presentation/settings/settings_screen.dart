@@ -10,7 +10,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/platform/is_android_native.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
@@ -82,13 +81,12 @@ class SettingsScreen extends ConsumerWidget {
                         title: context.l10n.keyboardShortcuts,
                         onTap: () => const HotkeysSettingsRoute().push(context),
                       ),
-                    if (isAndroidNative)
-                      SettingsGroupRow(
-                        icon: FluentIcons.alert_24_regular,
-                        title: context.l10n.notifications,
-                        onTap: () =>
-                            const NotificationsSettingsRoute().push(context),
-                      ),
+                    SettingsGroupRow(
+                      icon: FluentIcons.alert_24_regular,
+                      title: context.l10n.notifications,
+                      onTap: () =>
+                          const NotificationsSettingsRoute().push(context),
+                    ),
                   ],
                 ),
                 SettingsGroupHeading(label: context.l10n.library),

@@ -29,6 +29,7 @@ import 'features/settings/widgets/app_theme_mode_tile/app_theme_mode_tile.dart';
 import 'global_providers/global_providers.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'routes/router_config.dart';
+import 'utils/analytics/firebase_telemetry_service.dart';
 import 'utils/extensions/custom_extensions.dart';
 import 'utils/launch_url_in_web.dart';
 import 'utils/misc/toast/toast.dart';
@@ -47,10 +48,38 @@ class TsumiruApp extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final routes = ref.watch(routerConfigProvider);
 
-    // Initialization also drains a cold-start notification tap; Android settings are required.
+    // Initialization also drains a cold-start notification tap on mobile.
     useEffect(() {
-      if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) {
-        return null;
+      void handleRouteTarget(String target) {
+        if (!context.mounted) return;
+        if (target.startsWith('url:')) {
+          launchUrlInWeb(
+            context,
+            target.substring(4),
+            ref.read(toastProvider),
+          );
+          return;
+        }
+        routes.go(target);
+      }
+
+      AppTelemetry.onNavigateRequested = handleRouteTarget;
+      final pendingFcm = AppTelemetry.consumePendingFcmRoute();
+      if (pendingFcm != null) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => handleRouteTarget(pendingFcm),
+        );
+      }
+
+      if (kIsWeb ||
+          (defaultTargetPlatform != TargetPlatform.android &&
+              defaultTargetPlatform != TargetPlatform.iOS &&
+              defaultTargetPlatform != TargetPlatform.macOS)) {
+        return () {
+          if (AppTelemetry.onNavigateRequested == handleRouteTarget) {
+            AppTelemetry.onNavigateRequested = null;
+          }
+        };
       }
       bool allowed(NotificationPayload payload) =>
           context.mounted &&
@@ -84,6 +113,10 @@ class TsumiruApp extends HookConsumerWidget {
           launchUrlInWeb(context, raw.substring(4), ref.read(toastProvider));
           return;
         }
+        if (raw != null && raw.startsWith('fcm_route:')) {
+          handleRouteTarget(raw.substring('fcm_route:'.length));
+          return;
+        }
         final p = NotificationPayload.decode(r.payload);
         if (!allowed(p)) return;
         if (action == kNotifActionView && p.mangaId != null) {
@@ -100,7 +133,11 @@ class TsumiruApp extends HookConsumerWidget {
             final launch = await service.launchPayload();
             if (launch != null) go(launch);
           });
-      return null;
+      return () {
+        if (AppTelemetry.onNavigateRequested == handleRouteTarget) {
+          AppTelemetry.onNavigateRequested = null;
+        }
+      };
     }, const []);
 
     final themeMode = ref.watch(appThemeModeProvider);
@@ -245,10 +282,11 @@ class _IncognitoNotificationBridge extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      final incognitoTitle = context.l10n.notificationIncognitoTitle;
-      final incognitoBody = context.l10n.notificationIncognitoBody;
-      ref.listen<bool>(incognitoModeProvider, (_, on) async {
+    ref.listen<bool>(incognitoModeProvider, (_, on) async {
+      AppTelemetry.logEvent('incognito_toggle', {'enabled': on ? 1 : 0});
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        final incognitoTitle = context.l10n.notificationIncognitoTitle;
+        final incognitoBody = context.l10n.notificationIncognitoBody;
         final service = LocalNotificationService();
         await service.init();
         if (on) {
@@ -256,8 +294,8 @@ class _IncognitoNotificationBridge extends ConsumerWidget {
         } else {
           await service.cancelIncognito();
         }
-      });
-    }
+      }
+    });
     return child;
   }
 }

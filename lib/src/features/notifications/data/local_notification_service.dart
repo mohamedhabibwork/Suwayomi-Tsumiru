@@ -170,7 +170,16 @@ class LocalNotificationService {
     DidReceiveBackgroundNotificationResponseCallback? onBackgroundTap,
   }) async {
     const android = AndroidInitializationSettings('ic_stat_tsumiru');
-    const settings = InitializationSettings(android: android);
+    const darwin = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    const settings = InitializationSettings(
+      android: android,
+      iOS: darwin,
+      macOS: darwin,
+    );
     await _plugin.initialize(
       settings: settings,
       onDidReceiveNotificationResponse: onTap,
@@ -227,7 +236,22 @@ class LocalNotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    return await android?.requestNotificationsPermission() ?? true;
+    if (android != null) {
+      return await android.requestNotificationsPermission() ?? true;
+    }
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    if (ios != null) {
+      return await ios.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          ) ??
+          true;
+    }
+    return true;
   }
 
   // Cap the one-tap Download action to avoid mass enqueue.
@@ -377,8 +401,33 @@ class LocalNotificationService {
         enableVibration: !silent,
         autoCancel: !ongoing,
       ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: !silent,
+      ),
+      macOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: !silent,
+      ),
     ),
     payload: payload,
+  );
+
+  Future<void> showPushNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+  }) => _showSimple(
+    id: id,
+    channelId: newChaptersChannelId,
+    channelName: 'New chapters',
+    title: title,
+    body: body,
+    payload: payload,
+    importance: Importance.high,
   );
 
   Future<void> showLibraryUpdateError(

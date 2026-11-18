@@ -9,7 +9,6 @@ import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
-import '../../../../utils/platform/is_android_native.dart';
 import '../../../../utils/platform/platform_runtime.dart';
 import '../../../../widgets/desktop/desktop_window.dart';
 import '../../../account/data/account_providers.dart';
@@ -270,13 +269,12 @@ class _SettingsWindowPageListState
                             title: l.keyboardShortcuts,
                             location: const HotkeysSettingsRoute().location,
                           ),
-                        if (isAndroidNative)
-                          (
-                            icon: FluentIcons.alert_24_regular,
-                            title: l.notifications,
-                            location:
-                                const NotificationsSettingsRoute().location,
-                          ),
+                        (
+                          icon: FluentIcons.alert_24_regular,
+                          title: l.notifications,
+                          location:
+                              const NotificationsSettingsRoute().location,
+                        ),
                       ]),
                       group(l.library, [
                         (

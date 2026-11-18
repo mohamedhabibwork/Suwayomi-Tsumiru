@@ -10,6 +10,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../routes/router_config.dart';
+import '../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/misc/toast/toast.dart';
 import '../../offline/data/background/background_download_controller_shim.dart';
@@ -73,6 +74,7 @@ Future<void> performSignIn(
     ref.read(authTypeKeyProvider.notifier).update(authType);
     ref.read(authRecoveryTargetProvider.notifier).set(null);
     ref.read(needsReauthProvider.notifier).set(false);
+    AppTelemetry.logSignIn(method: authType.name, username: username);
     // Sign-in remains active in memory even when it cannot be saved for next launch.
     if (credentialWriteFailedThisRun) {
       final context = rootNavigatorKey.currentContext;

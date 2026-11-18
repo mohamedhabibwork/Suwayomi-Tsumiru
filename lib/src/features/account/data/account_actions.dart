@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../auth/data/auth_coordinator.dart';
 import '../../auth/data/auth_credentials_store.dart';
 import '../../auth/data/auth_recovery_target.dart';
@@ -65,6 +66,7 @@ class AccountActions {
       await store.clearSimpleLoginCookie();
       await store.clearBasicCredentials();
       ref.read(needsReauthProvider.notifier).set(false);
+      AppTelemetry.logSignOut();
     }, expectedEpoch: store.serverEpoch);
   }
 
@@ -133,6 +135,10 @@ class AccountActions {
       ref.read(authTypeKeyProvider.notifier).update(AuthType.uiLogin);
       ref.read(authRecoveryTargetProvider.notifier).set(null);
       ref.read(needsReauthProvider.notifier).set(false);
+      AppTelemetry.logSignUp(
+        method: username != null ? 'registration_code' : 'recovery_code',
+        username: canonicalUsername,
+      );
     }, expectedEpoch: store.serverEpoch);
   }
 

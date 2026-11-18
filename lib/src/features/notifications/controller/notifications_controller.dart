@@ -4,6 +4,8 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
+import 'dart:async';
+
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:uuid/uuid.dart';
@@ -12,6 +14,7 @@ import 'package:workmanager/workmanager.dart';
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
 import '../../../global_providers/global_providers.dart';
+import '../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../../../utils/platform/is_android_native.dart';
 import '../../auth/data/auth_credentials_store.dart';
@@ -195,16 +198,33 @@ class NotificationsController {
       await store.writeConfig(config);
 
       if (!newChapters) await store.clearState();
+      if (newChapters) {
+        unawaited(AppTelemetry.subscribeToTopic('new_chapters'));
+      } else {
+        unawaited(AppTelemetry.unsubscribeFromTopic('new_chapters'));
+      }
+      if (appUpdates) {
+        unawaited(AppTelemetry.subscribeToTopic('app_updates'));
+      } else {
+        unawaited(AppTelemetry.unsubscribeFromTopic('app_updates'));
+      }
+      if (extUpdates) {
+        unawaited(AppTelemetry.subscribeToTopic('extension_updates'));
+      } else {
+        unawaited(AppTelemetry.unsubscribeFromTopic('extension_updates'));
+      }
     });
     await reconcileBackgroundSchedule();
   }
 
-  /// Requests Android notification permission before enabling and reconciling scheduling.
+  /// Requests notification permission (FCM + Local) before enabling and reconciling scheduling.
   Future<void> requestPermissionAndSync() async {
-    if (!isAndroidNative) return;
-    final service = LocalNotificationService();
-    await service.init();
-    await service.requestPermission();
+    await AppTelemetry.requestFcmPermissionAndRegister();
+    if (isAndroidNative) {
+      final service = LocalNotificationService();
+      await service.init();
+      await service.requestPermission();
+    }
     await sync();
   }
 

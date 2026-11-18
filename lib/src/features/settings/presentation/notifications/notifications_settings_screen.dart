@@ -5,16 +5,22 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 import 'package:fluentui_system_icons/fluentui_system_icons.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../constants/app_distribution.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../notifications/controller/notification_settings_providers.dart';
 import '../../../notifications/controller/notifications_controller.dart';
+import '../../../notifications/data/local_notification_service.dart';
 import '../../search/settings_search_registry.dart';
 import '../../widgets/settings_group_card/settings_group_card.dart';
 
@@ -36,6 +42,13 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
     final wifiOnly = ref.watch(notificationsWifiOnlyProvider).ifNull(true);
     final chargingOnly = ref.watch(notificationsChargingOnlyProvider).ifNull();
     final hideContent = ref.watch(notificationsHideContentProvider).ifNull();
+    final fcmToken = useValueListenable(AppTelemetry.fcmTokenNotifier);
+    final fcmAuthorized = useValueListenable(
+      AppTelemetry.fcmAuthorizedNotifier,
+    );
+    final analyticsEnabled = useValueListenable(
+      AppTelemetry.analyticsEnabledNotifier,
+    );
 
     Future<void> reconcile() => controller.sync();
 
@@ -52,9 +65,102 @@ class NotificationsSettingsScreen extends HookConsumerWidget {
             child: ListView(
               padding: settingsPagePadding(context),
               children: [
+                const SettingsGroupHeading(
+                  label: 'Firebase Push (FCM) & Analytics',
+                  first: true,
+                ),
+                SettingsGroupCard(
+                  children: [
+                    CompactSwitchListTile(
+                      title: const Text('Push Notifications (FCM)'),
+                      subtitle: Text(
+                        fcmAuthorized
+                            ? 'Connected to Firebase Cloud Messaging'
+                            : 'Enable real-time push alerts on mobile & web',
+                      ),
+                      value: fcmAuthorized,
+                      onChanged: (v) async {
+                        if (v) {
+                          final token =
+                              await AppTelemetry.requestFcmPermissionAndRegister();
+                          if (context.mounted) {
+                            ref
+                                .read(toastProvider)
+                                ?.show(
+                                  token != null
+                                      ? 'FCM Push Notifications enabled'
+                                      : 'Notification permission requested',
+                                );
+                          }
+                        } else {
+                          AppTelemetry.fcmAuthorizedNotifier.value = false;
+                        }
+                      },
+                    ),
+                    if (fcmToken != null && fcmToken.isNotEmpty)
+                      ListTile(
+                        leading: const Icon(FluentIcons.key_24_regular),
+                        title: const Text('FCM Device Token'),
+                        subtitle: Text(
+                          fcmToken.length > 36
+                              ? '${fcmToken.substring(0, 18)}...${fcmToken.substring(fcmToken.length - 12)}'
+                              : fcmToken,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(FluentIcons.copy_24_regular),
+                          tooltip: 'Copy FCM Token',
+                          onPressed: () async {
+                            await Clipboard.setData(
+                              ClipboardData(text: fcmToken),
+                            );
+                            if (context.mounted) {
+                              ref
+                                  .read(toastProvider)
+                                  ?.show('FCM token copied to clipboard');
+                            }
+                          },
+                        ),
+                      ),
+                    ListTile(
+                      leading: const Icon(FluentIcons.send_24_regular),
+                      title: const Text('Send Test Notification'),
+                      subtitle: const Text(
+                        'Verify push notification display & deep-link routing',
+                      ),
+                      onTap: () async {
+                        AppTelemetry.logEvent('test_notification_triggered');
+                        if (!kIsWeb) {
+                          final service = LocalNotificationService();
+                          await service.init();
+                          await service.requestPermission();
+                          await service.showPushNotification(
+                            id: 99999,
+                            title: 'Mangaka FC Push Connected',
+                            body: 'Tap to open Updates in Mangaka FC.',
+                            payload: 'fcm_route:/updates',
+                          );
+                        }
+                        if (context.mounted) {
+                          ref
+                              .read(toastProvider)
+                              ?.show('Test notification dispatched');
+                        }
+                      },
+                    ),
+                    CompactSwitchListTile(
+                      title: const Text('Firebase Analytics'),
+                      subtitle: const Text(
+                        'Track app navigation, reading, extensions & actions (G-HYMVLS4M4J)',
+                      ),
+                      value: analyticsEnabled,
+                      onChanged: (v) async {
+                        await AppTelemetry.setAnalyticsEnabled(v);
+                      },
+                    ),
+                  ],
+                ),
                 SettingsGroupHeading(
                   label: l10n.notificationsSectionNewChapters,
-                  first: true,
                 ),
                 SettingsGroupCard(
                   children: [

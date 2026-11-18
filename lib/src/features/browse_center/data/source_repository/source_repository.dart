@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/webui_meta/webui_meta_repository.dart';
 import '../../../account/data/account_permission.dart';
@@ -36,23 +37,36 @@ class SourceRepository {
     required int page,
     String? query,
     List<FilterChange>? filters,
-  }) => ferryClient
-      .mutate$FetchSourceManga(
-        Options$Mutation$FetchSourceManga(
-          variables: Variables$Mutation$FetchSourceManga(
-            withLibraryFields: false,
-            withFirstUnread: false,
-            input: Input$FetchSourceMangaInput(
-              query: query,
-              page: page,
-              source: sourceId,
-              type: sourceType,
-              filters: filters,
+  }) {
+    if (page == 1) {
+      AppTelemetry.logSourceBrowse(
+        sourceId: sourceId,
+        sourceType: sourceType.name,
+        page: page,
+        query: query,
+      );
+      if (query != null && query.trim().isNotEmpty) {
+        AppTelemetry.logSearch(searchTerm: query, scope: sourceId);
+      }
+    }
+    return ferryClient
+        .mutate$FetchSourceManga(
+          Options$Mutation$FetchSourceManga(
+            variables: Variables$Mutation$FetchSourceManga(
+              withLibraryFields: false,
+              withFirstUnread: false,
+              input: Input$FetchSourceMangaInput(
+                query: query,
+                page: page,
+                source: sourceId,
+                type: sourceType,
+                filters: filters,
+              ),
             ),
           ),
-        ),
-      )
-      .getData((data) => data.fetchSourceManga);
+        )
+        .getData((data) => data.fetchSourceManga);
+  }
 
   Future<SourceDto?> getSource(String sourceId) => ferryClient
       .query$SourceById(
@@ -100,27 +114,32 @@ class SourceRepository {
   );
 
   /// Persists pin state in server meta shared with WebUI.
-  Future<void> setSourcePinned(String sourceId, bool pinned) =>
-      WebUiMetaRepository(
-        ferryClient,
-      ).writeSourceValue(sourceId, 'isPinned', pinned ? 'true' : 'false');
+  Future<void> setSourcePinned(String sourceId, bool pinned) {
+    AppTelemetry.logSourcePinToggle(sourceId: sourceId, pinned: pinned);
+    return WebUiMetaRepository(
+      ferryClient,
+    ).writeSourceValue(sourceId, 'isPinned', pinned ? 'true' : 'false');
+  }
 
   /// Persists hidden state in server meta shared across Tsumiru devices.
-  Future<void> setSourceHidden(String sourceId, bool hidden) => ferryClient
-      .mutate$SetSourceMeta(
-        Options$Mutation$SetSourceMeta(
-          variables: Variables$Mutation$SetSourceMeta(
-            input: Input$SetSourceMetaInput(
-              meta: Input$SourceMetaTypeInput(
-                sourceId: sourceId,
-                key: kSourceHiddenMetaKey,
-                value: hidden ? 'true' : 'false',
+  Future<void> setSourceHidden(String sourceId, bool hidden) {
+    AppTelemetry.logSourceHideToggle(sourceId: sourceId, hidden: hidden);
+    return ferryClient
+        .mutate$SetSourceMeta(
+          Options$Mutation$SetSourceMeta(
+            variables: Variables$Mutation$SetSourceMeta(
+              input: Input$SetSourceMetaInput(
+                meta: Input$SourceMetaTypeInput(
+                  sourceId: sourceId,
+                  key: kSourceHiddenMetaKey,
+                  value: hidden ? 'true' : 'false',
+                ),
               ),
             ),
           ),
-        ),
-      )
-      .getData((data) => data.setSourceMeta?.meta);
+        )
+        .getData((data) => data.setSourceMeta?.meta);
+  }
 }
 
 @riverpod

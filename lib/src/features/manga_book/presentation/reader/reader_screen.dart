@@ -14,6 +14,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../../constants/db_keys.dart';
 import '../../../../constants/enum.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
@@ -93,6 +94,11 @@ class ReaderScreen extends HookConsumerWidget {
     // Resolve l10n during build; inherited-widget lookup is invalid during hook initialization.
     final autoWebtoonSnack = context.l10n.autoWebtoonSnack;
     useEffect(() {
+      AppTelemetry.logChapterOpen(
+        mangaId: mangaId,
+        chapterId: chapterId,
+        readerMode: (autoReaderMode ?? defaultReaderMode)?.name,
+      );
       if (autoReaderMode == ReaderMode.webtoon) {
         toast?.show(autoWebtoonSnack, withMicrotask: true);
       }
@@ -129,6 +135,11 @@ class ReaderScreen extends HookConsumerWidget {
           (currentPage >= (actualPageCount - 1)) && actualPageCount > 0;
 
       if (isReadingCompleted && context.mounted) {
+        AppTelemetry.logChapterCompleted(
+          mangaId: mangaId,
+          chapterId: chapterValue.id,
+          totalPages: actualPageCount,
+        );
         unawaited(
           maybeTrackProgressOnReadFetch(
             ref.read,

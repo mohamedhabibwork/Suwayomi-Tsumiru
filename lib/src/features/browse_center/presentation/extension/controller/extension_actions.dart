@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
 import '../../../data/extension_repository/extension_repository.dart';
@@ -26,34 +27,60 @@ class ExtensionActions {
 
   ExtensionRepository get _repository => _ref.read(extensionRepositoryProvider);
 
-  Future<void> install(String pkgName, {String? languageCode}) =>
-      _refreshAfter((current) => _install(pkgName, languageCode, current));
+  Future<void> install(String pkgName, {String? languageCode}) {
+    AppTelemetry.logExtensionAction(
+      action: 'install',
+      pkgName: pkgName,
+      language: languageCode,
+    );
+    return _refreshAfter((current) => _install(pkgName, languageCode, current));
+  }
 
-  Future<void> reinstall(String pkgName, {String? languageCode}) =>
-      _refreshAfter((current) async {
-        final repository = _repository;
-        repository.permissions.require(Enum$UserPermission.INSTALL_EXTENSIONS);
-        repository.permissions.require(
-          Enum$UserPermission.UNINSTALL_EXTENSIONS,
-        );
-        await repository.uninstallExtension(pkgName);
-        if (!current()) return;
-        await _install(pkgName, languageCode, current);
-      });
-
-  Future<void> installFile(BuildContext context, {PlatformFile? file}) =>
-      _refreshAfter(
-        (_) => _repository.installExtensionFile(context, file: file),
+  Future<void> reinstall(String pkgName, {String? languageCode}) {
+    AppTelemetry.logExtensionAction(
+      action: 'reinstall',
+      pkgName: pkgName,
+      language: languageCode,
+    );
+    return _refreshAfter((current) async {
+      final repository = _repository;
+      repository.permissions.require(Enum$UserPermission.INSTALL_EXTENSIONS);
+      repository.permissions.require(
+        Enum$UserPermission.UNINSTALL_EXTENSIONS,
       );
+      await repository.uninstallExtension(pkgName);
+      if (!current()) return;
+      await _install(pkgName, languageCode, current);
+    });
+  }
 
-  Future<void> update(String pkgName) =>
-      _refreshAfter((_) => _repository.updateExtension(pkgName));
+  Future<void> installFile(BuildContext context, {PlatformFile? file}) {
+    AppTelemetry.logExtensionAction(
+      action: 'install_file',
+      pkgName: file?.name ?? 'local_file',
+    );
+    return _refreshAfter(
+      (_) => _repository.installExtensionFile(context, file: file),
+    );
+  }
 
-  Future<void> updateAll(List<String> pkgNames) =>
-      _refreshAfter((_) => _repository.updateAllExtensions(pkgNames));
+  Future<void> update(String pkgName) {
+    AppTelemetry.logExtensionAction(action: 'update', pkgName: pkgName);
+    return _refreshAfter((_) => _repository.updateExtension(pkgName));
+  }
 
-  Future<void> uninstall(String pkgName) =>
-      _refreshAfter((_) => _repository.uninstallExtension(pkgName));
+  Future<void> updateAll(List<String> pkgNames) {
+    AppTelemetry.logExtensionAction(
+      action: 'update_all',
+      pkgName: '${pkgNames.length}_extensions',
+    );
+    return _refreshAfter((_) => _repository.updateAllExtensions(pkgNames));
+  }
+
+  Future<void> uninstall(String pkgName) {
+    AppTelemetry.logExtensionAction(action: 'uninstall', pkgName: pkgName);
+    return _refreshAfter((_) => _repository.uninstallExtension(pkgName));
+  }
 
   Future<void> _install(
     String pkgName,

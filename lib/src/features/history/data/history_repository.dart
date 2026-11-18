@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../global_providers/global_providers.dart';
 import '../../../graphql/__generated__/schema.graphql.dart';
+import '../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../utils/extensions/custom_extensions.dart';
 import '../domain/history_item.dart';
 import 'graphql/__generated__/query.graphql.dart';
@@ -81,6 +82,12 @@ class HistoryRepository {
       ),
     ];
 
+    if (searchQuery.isNotBlank || inLibrary != null) {
+      AppTelemetry.logHistoryQuery(
+        searchQuery: searchQuery,
+        inLibrary: inLibrary,
+      );
+    }
     final chapters = await client
         .query$GetReadingHistory(
           Options$Query$GetReadingHistory(

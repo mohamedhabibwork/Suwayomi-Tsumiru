@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../../../constants/db_keys.dart';
+import '../../../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../../utils/mixin/shared_preferences_client_mixin.dart';
 import '../../../../../../widgets/compact_switch.dart';
@@ -50,6 +51,7 @@ void lockNsfwOnAppClose(WidgetRef ref) {
   _nsfwSessionFaceIdUnlocked = false;
   if (ref.read(showNSFWProvider).ifNull(false)) {
     ref.read(showNSFWProvider.notifier).update(false);
+    AppTelemetry.logNsfwToggle(enabled: false, trigger: 'app_close_auto_hide');
   }
 }
 
@@ -68,6 +70,7 @@ class ShowNSFW extends _$ShowNSFW with SharedPreferenceClientMixin<bool> {
     final enabled = value ?? false;
     _nsfwSessionFaceIdUnlocked = enabled;
     super.update(enabled);
+    AppTelemetry.logNsfwToggle(enabled: enabled, trigger: 'user_switch');
   }
 }
 

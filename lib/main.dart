@@ -61,6 +61,7 @@ import 'src/features/tracking/data/tracker_oauth_browser_stub.dart'
 import 'src/global_providers/global_providers.dart';
 import 'src/routes/router_config.dart';
 import 'src/tsumiru_app.dart';
+import 'src/utils/analytics/firebase_telemetry_service.dart';
 import 'src/utils/crash/crash_log.dart';
 import 'src/utils/crash/diagnostics.dart';
 import 'src/utils/crash/provider_failure_logger.dart';
@@ -118,6 +119,12 @@ Future<void> _startApp() async {
   _logBoot(
     'start v${packageInfo.version}+${packageInfo.buildNumber} '
     '(${defaultTargetPlatform.name})',
+  );
+  unawaited(
+    AppTelemetry.init(
+      appVersion: packageInfo.version,
+      buildNumber: packageInfo.buildNumber,
+    ),
   );
   final sharedPreferences = await SharedPreferences.getInstance();
   // Restore the desktop window before the first frame.

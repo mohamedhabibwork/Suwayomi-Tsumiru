@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../account/data/account_permission.dart';
 import '../../domain/extension_store/extension_store_model.dart';
@@ -28,29 +29,37 @@ class ExtensionStoreRepository {
         ),
       );
 
-  Future<void> addStore(String indexUrl) => permissions.run(
-    Enum$UserPermission.MANAGE_EXTENSION_STORES,
-    () => client
-        .mutate$AddExtensionStore(
-          Options$Mutation$AddExtensionStore(
-            variables: Variables$Mutation$AddExtensionStore(indexUrl: indexUrl),
-          ),
-        )
-        .getData((data) {}),
-  );
-
-  Future<void> removeStore(String indexUrl) => permissions.run(
-    Enum$UserPermission.MANAGE_EXTENSION_STORES,
-    () => client
-        .mutate$RemoveExtensionStore(
-          Options$Mutation$RemoveExtensionStore(
-            variables: Variables$Mutation$RemoveExtensionStore(
-              indexUrl: indexUrl,
+  Future<void> addStore(String indexUrl) {
+    AppTelemetry.logExtensionStoreAction(action: 'add', indexUrl: indexUrl);
+    return permissions.run(
+      Enum$UserPermission.MANAGE_EXTENSION_STORES,
+      () => client
+          .mutate$AddExtensionStore(
+            Options$Mutation$AddExtensionStore(
+              variables: Variables$Mutation$AddExtensionStore(
+                indexUrl: indexUrl,
+              ),
             ),
-          ),
-        )
-        .getData((data) {}),
-  );
+          )
+          .getData((data) {}),
+    );
+  }
+
+  Future<void> removeStore(String indexUrl) {
+    AppTelemetry.logExtensionStoreAction(action: 'remove', indexUrl: indexUrl);
+    return permissions.run(
+      Enum$UserPermission.MANAGE_EXTENSION_STORES,
+      () => client
+          .mutate$RemoveExtensionStore(
+            Options$Mutation$RemoveExtensionStore(
+              variables: Variables$Mutation$RemoveExtensionStore(
+                indexUrl: indexUrl,
+              ),
+            ),
+          )
+          .getData((data) {}),
+    );
+  }
 }
 
 @riverpod

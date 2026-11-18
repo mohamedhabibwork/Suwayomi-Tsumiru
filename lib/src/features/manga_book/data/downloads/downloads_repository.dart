@@ -9,6 +9,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../../global_providers/global_providers.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
+import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../account/data/account_permission.dart';
 import '../../../auth/data/auth_credentials_store.dart';
@@ -31,45 +32,59 @@ class DownloadsRepository {
 
   final GraphQLClient client;
   final GraphQLClient subscriptionClient;
-  Future<void> startDownloads() => permissions.run(
-    Enum$UserPermission.DOWNLOAD_CHAPTERS,
-    () => client
-        .mutate$StartDownloader(
-          Options$Mutation$StartDownloader(
-            variables: Variables$Mutation$StartDownloader(
-              input: Input$StartDownloaderInput(),
+  Future<void> startDownloads() {
+    AppTelemetry.logDownloadAction(action: 'start');
+    return permissions.run(
+      Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      () => client
+          .mutate$StartDownloader(
+            Options$Mutation$StartDownloader(
+              variables: Variables$Mutation$StartDownloader(
+                input: Input$StartDownloaderInput(),
+              ),
             ),
-          ),
-        )
-        .getData((data) {}),
-  );
+          )
+          .getData((data) {}),
+    );
+  }
 
-  Future<void> stopDownloads() => permissions.run(
-    Enum$UserPermission.DOWNLOAD_CHAPTERS,
-    () => client
-        .mutate$StopDownloader(
-          Options$Mutation$StopDownloader(
-            variables: Variables$Mutation$StopDownloader(
-              input: Input$StopDownloaderInput(),
+  Future<void> stopDownloads() {
+    AppTelemetry.logDownloadAction(action: 'stop');
+    return permissions.run(
+      Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      () => client
+          .mutate$StopDownloader(
+            Options$Mutation$StopDownloader(
+              variables: Variables$Mutation$StopDownloader(
+                input: Input$StopDownloaderInput(),
+              ),
             ),
-          ),
-        )
-        .getData((data) {}),
-  );
-  Future<void> clearDownloads() => permissions.run(
-    Enum$UserPermission.DOWNLOAD_CHAPTERS,
-    () => client
-        .mutate$ClearDownloader(
-          Options$Mutation$ClearDownloader(
-            variables: Variables$Mutation$ClearDownloader(
-              input: Input$ClearDownloaderInput(),
+          )
+          .getData((data) {}),
+    );
+  }
+
+  Future<void> clearDownloads() {
+    AppTelemetry.logDownloadAction(action: 'clear');
+    return permissions.run(
+      Enum$UserPermission.DOWNLOAD_CHAPTERS,
+      () => client
+          .mutate$ClearDownloader(
+            Options$Mutation$ClearDownloader(
+              variables: Variables$Mutation$ClearDownloader(
+                input: Input$ClearDownloaderInput(),
+              ),
             ),
-          ),
-        )
-        .getData((data) {}),
-  );
+          )
+          .getData((data) {}),
+    );
+  }
 
   Future<void> addChaptersBatchToDownloadQueue(List<int> chapterIds) async {
+    AppTelemetry.logDownloadAction(
+      action: 'enqueue',
+      count: chapterIds.length,
+    );
     await verifyBeforeEnqueue?.call();
     return permissions.run(
       Enum$UserPermission.DOWNLOAD_CHAPTERS,

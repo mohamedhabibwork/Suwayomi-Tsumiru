@@ -13,6 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../constants/db_keys.dart';
 import '../../../constants/enum.dart';
+import '../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../account/data/account_actions.dart';
 import '../../settings/presentation/server/widget/client/server_url_tile/server_url_tile.dart';
 import '../data/secure_credentials_provider.dart';
@@ -40,10 +41,13 @@ Future<bool> authenticateWithFaceId({
     final ok = await _biometricsChannel.invokeMethod<bool>('authenticate', {
       'reason': reason,
     });
-    return ok ?? true;
+    final success = ok ?? true;
+    AppTelemetry.logFaceIdAuth(purpose: reason, success: success);
+    return success;
   } on MissingPluginException {
     return true;
   } on PlatformException {
+    AppTelemetry.logFaceIdAuth(purpose: reason, success: false);
     return false;
   } catch (_) {
     return true;

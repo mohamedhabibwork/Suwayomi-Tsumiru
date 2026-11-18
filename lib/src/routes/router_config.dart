@@ -70,6 +70,7 @@ import '../features/settings/presentation/settings/settings_screen.dart';
 import '../features/settings/presentation/settings/settings_window.dart';
 import '../features/settings/presentation/sync/sync_screen.dart';
 import '../features/tracking/presentation/settings/tracking_settings_screen.dart';
+import '../utils/analytics/firebase_telemetry_service.dart';
 import '../utils/extensions/custom_extensions.dart';
 import '../utils/motion/reduce_motion.dart';
 import '../widgets/desktop/desktop_page_frame.dart';
@@ -188,10 +189,14 @@ GoRouter routerConfig(Ref ref) {
       if (complete && atOnboarding) {
         return const LibraryRoute(categoryId: 0).location;
       }
-      final pending = _pendingRouteAfterIdentityChange;
+      final pending =
+          _pendingRouteAfterIdentityChange ??
+          AppTelemetry.consumePendingFcmRoute();
       if (pending != null) {
         _pendingRouteAfterIdentityChange = null;
-        if (state.matchedLocation != pending) return pending;
+        if (!pending.startsWith('url:') && state.matchedLocation != pending) {
+          return pending;
+        }
       }
       // Redirect /more only when the desktop sidebar shows its Settings foot.
       if (state.matchedLocation == const MoreRoute().location &&
@@ -202,7 +207,22 @@ GoRouter routerConfig(Ref ref) {
       return null;
     },
   );
-  ref.onDispose(router.dispose);
+  String? lastLoggedLocation;
+  void logCurrentRoute() {
+    final location = router.routerDelegate.currentConfiguration.isEmpty
+        ? router.routeInformationProvider.value.uri.path
+        : router.routerDelegate.currentConfiguration.uri.path;
+    if (location.isNotEmpty && location != lastLoggedLocation) {
+      lastLoggedLocation = location;
+      AppTelemetry.logScreenView(screenName: location);
+    }
+  }
+
+  router.routerDelegate.addListener(logCurrentRoute);
+  ref.onDispose(() {
+    router.routerDelegate.removeListener(logCurrentRoute);
+    router.dispose();
+  });
   return router;
 }
 

@@ -219,6 +219,14 @@ class RustrakService {
           'colno': colno,
           'in_app': file.contains('package:tsumiru/') || file.contains('main.dart'),
         });
+      } else {
+        parsed.add({
+          'function': trimmed,
+          'filename': 'aot_binary',
+          'lineno': 0,
+          'colno': 0,
+          'in_app': !trimmed.contains('dart:') && !trimmed.contains('package:flutter/'),
+        });
       }
     }
     // Sentry expects frames ordered from oldest caller to newest frame.

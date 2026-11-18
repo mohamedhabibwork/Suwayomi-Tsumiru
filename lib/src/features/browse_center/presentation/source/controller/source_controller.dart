@@ -54,11 +54,11 @@ AsyncValue<List<SourceDto>?> browsableSourceList(Ref ref) {
       pkg.trim().toLowerCase(),
   };
   return ref.watch(visibleSourceListProvider).copyWithData(
-        (list) => list == null
+        (List<SourceDto>? list) => list == null
             ? list
             : [
                 ...list.where(
-                  (e) =>
+                  (SourceDto e) =>
                       !e.isHidden &&
                       !disabledExts.contains(
                         e.$extension.pkgName.trim().toLowerCase(),

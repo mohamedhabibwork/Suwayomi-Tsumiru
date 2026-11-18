@@ -21,6 +21,7 @@ import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/video/video_stream_helper.dart';
 import '../../../../widgets/confirm_bulk_download_dialog.dart';
 import '../../../offline/presentation/offline_action_confirmations.dart';
 import '../../data/downloads/downloads_repository.dart';
@@ -434,13 +435,21 @@ void openChapterInBrowser(
   ChapterDto chapter,
   String? seriesUrl,
 ) {
+  final manga = ref.read(mangaWithIdProvider(mangaId: chapter.mangaId)).value;
+  if (isVideoStreamingManga(manga, chapter)) {
+    final streamUrl = resolveVideoStreamUrl(manga: manga, chapter: chapter);
+    launchUrlInAppBrowser(context, streamUrl, ref.read(toastProvider));
+    return;
+  }
   final url = chapter.realUrl ?? seriesUrl;
   if (url == null) return;
   launchUrlInWeb(context, url, ref.read(toastProvider));
 }
 
 bool chapterHasBrowserTarget(ChapterDto chapter, String? seriesUrl) =>
-    chapter.realUrl != null || seriesUrl != null;
+    chapter.realUrl != null ||
+    seriesUrl != null ||
+    chapter.name.trim().toLowerCase().startsWith('episode');
 
 bool canDownloadChapters(WidgetRef ref) => ref
     .read(settledAccountAccessProvider)

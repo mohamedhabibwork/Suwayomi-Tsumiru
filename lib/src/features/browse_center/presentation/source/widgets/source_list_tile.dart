@@ -12,7 +12,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/video/video_stream_helper.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../data/source_repository/source_repository.dart';
@@ -26,9 +28,26 @@ class SourceListTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isVideo = isVideoStreamingSource(source);
     final actions = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        if (isVideo)
+          IconButton(
+            tooltip: 'Open Video Portal',
+            icon: Icon(
+              FluentIcons.play_circle_24_filled,
+              color: context.theme.colorScheme.primary,
+            ),
+            onPressed: () {
+              ref.read(sourceLastUsedProvider.notifier).update(source.id);
+              launchUrlInAppBrowser(
+                context,
+                resolveSourceVideoPortalUrl(source),
+                ref.read(toastProvider),
+              );
+            },
+          ),
         if (source.supportsLatest.ifNull())
           WebRouteLink(
             location: SourceTypeRoute(

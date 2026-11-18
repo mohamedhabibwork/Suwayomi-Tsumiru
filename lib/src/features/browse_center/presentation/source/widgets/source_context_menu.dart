@@ -16,6 +16,7 @@ import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../utils/video/video_stream_helper.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart'
     show ChapterMenuRow;
 import '../../../../settings/presentation/server/widget/client/server_port_tile/server_port_tile.dart';
@@ -74,8 +75,23 @@ Future<void> toggleSourcePin(BuildContext context, SourceDto source) async {
   }
 }
 
-void openSourceHomepage(BuildContext context, WidgetRef ref, String? homeUrl) {
+void openSourceHomepage(
+  BuildContext context,
+  WidgetRef ref,
+  String? homeUrl, {
+  SourceDto? source,
+}) {
+  if (source != null && isVideoStreamingSource(source)) {
+    final target = resolveSourceVideoPortalUrl(source);
+    launchUrlInAppBrowser(context, target, ref.read(toastProvider));
+    return;
+  }
   if (homeUrl.isBlank) return;
+  final trimmed = homeUrl!.trim();
+  if (trimmed.startsWith('http')) {
+    launchUrlInAppBrowser(context, trimmed, ref.read(toastProvider));
+    return;
+  }
   final api = Endpoints.baseApi(
     baseUrl: ref.read(serverUrlProvider),
     port: ref.read(serverPortProvider),
@@ -155,12 +171,21 @@ Future<void> showSourceContextMenu({
             label: context.l10n.settings,
           ),
         ),
-      if (source.homeUrl.isNotBlank)
+      if (source.homeUrl.isNotBlank || isVideoStreamingSource(source))
         PopupMenuItem(
-          onTap: () => openSourceHomepage(context, ref, source.homeUrl),
+          onTap: () => openSourceHomepage(
+            context,
+            ref,
+            source.homeUrl,
+            source: source,
+          ),
           child: ChapterMenuRow(
-            icon: FluentIcons.globe_24_regular,
-            label: context.l10n.openHomepage,
+            icon: isVideoStreamingSource(source)
+                ? FluentIcons.play_circle_24_regular
+                : FluentIcons.globe_24_regular,
+            label: isVideoStreamingSource(source)
+                ? 'Open Video Portal'
+                : context.l10n.openHomepage,
           ),
         ),
       const PopupMenuDivider(),

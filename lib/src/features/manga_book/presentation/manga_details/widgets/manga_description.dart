@@ -21,6 +21,7 @@ import '../../../../../utils/launch_url_in_web.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
 import '../../../../../utils/theme/brand.dart';
+import '../../../../../utils/video/video_stream_helper.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/hover_tap_target.dart';
 import '../../../../../widgets/manga_cover/list/manga_cover_descriptive_list_tile.dart';
@@ -128,6 +129,11 @@ class MangaDescription extends HookConsumerWidget {
     MangaDto manga,
   ) {
     final toast = ref.read(toastProvider);
+    if (isVideoStreamingManga(manga)) {
+      final streamUrl = resolveVideoStreamUrl(manga: manga);
+      launchUrlInAppBrowser(context, streamUrl, toast);
+      return;
+    }
     final serverUrl = serverMangaWebUrl(ref, manga.id);
     if (manga.realUrl.isBlank) {
       if (serverUrl != null) launchUrlInWeb(context, serverUrl, toast);
@@ -497,6 +503,19 @@ class MangaDescription extends HookConsumerWidget {
                                 ? context.l10n.inLibrary
                                 : context.l10n.addToLibrary,
                             onPressed: toggleLibrary,
+                          ),
+                        ),
+                      if (isVideoStreamingManga(manga))
+                        Expanded(
+                          child: MangaActionButton(
+                            active: true,
+                            icon: const Icon(FluentIcons.play_circle_24_filled),
+                            label: 'Watch Stream',
+                            onPressed: () => launchUrlInAppBrowser(
+                              context,
+                              resolveVideoStreamUrl(manga: manga),
+                              ref.read(toastProvider),
+                            ),
                           ),
                         ),
                       Expanded(

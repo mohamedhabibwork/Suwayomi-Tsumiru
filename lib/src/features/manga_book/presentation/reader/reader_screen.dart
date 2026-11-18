@@ -18,6 +18,7 @@ import '../../../../utils/analytics/firebase_telemetry_service.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/launch_url_in_web.dart';
 import '../../../../utils/misc/toast/toast.dart';
+import '../../../../utils/video/video_stream_helper.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../history/presentation/history_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
@@ -400,15 +401,7 @@ class ReaderScreen extends HookConsumerWidget {
                         );
                       }
                       final isVideoEpisode =
-                          (data.source?.name ?? '')
-                              .toLowerCase()
-                              .contains('(video)') ||
-                          data.genre.any(
-                            (g) =>
-                                g.toLowerCase() == 'video' ||
-                                g.toLowerCase() == 'anime',
-                          ) ||
-                          chapterData.name.toLowerCase().startsWith('episode');
+                          isVideoStreamingManga(data, chapterData);
                       final readerBody = switch (autoReaderMode ??
                           data.metaData.readerMode ??
                           defaultReaderMode) {
@@ -615,30 +608,20 @@ class ReaderScreen extends HookConsumerWidget {
                         },
                       };
                       if (!isVideoEpisode) return readerBody;
-                      final encodedQuery = Uri.encodeComponent(
-                        '${data.title} ${chapterData.name}',
+                      final streamUrl = resolveVideoStreamUrl(
+                        manga: data,
+                        chapter: chapterData,
                       );
-                      final streamUrl =
-                          'https://hianime.to/search?keyword=$encodedQuery';
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          readerBody,
-                          Positioned(
-                            right: 16,
-                            bottom: 24,
-                            child: FloatingActionButton.extended(
-                              heroTag: 'watch_video_episode_${chapterData.id}',
-                              onPressed: () => launchUrlInAppBrowser(
-                                context,
-                                streamUrl,
-                                ref.read(toastProvider),
-                              ),
-                              icon: const Icon(Icons.play_circle_fill_rounded),
-                              label: Text('Watch ${chapterData.name}'),
-                            ),
-                          ),
-                        ],
+                      final mirrors = buildVideoStreamMirrors(
+                        manga: data,
+                        chapter: chapterData,
+                      );
+                      return _VideoEpisodeReaderOverlay(
+                        chapter: chapterData,
+                        manga: data,
+                        primaryStreamUrl: streamUrl,
+                        mirrors: mirrors,
+                        child: readerBody,
                       );
                     },
                     refresh: () => ref.refresh(
@@ -735,4 +718,133 @@ T? _usePinned<T extends Object>(T? value, int key) {
   if (value == null) return null;
   pinned.value = (key: key, value: value);
   return value;
+}
+
+class _VideoEpisodeReaderOverlay extends HookConsumerWidget {
+  const _VideoEpisodeReaderOverlay({
+    required this.chapter,
+    required this.manga,
+    required this.primaryStreamUrl,
+    required this.mirrors,
+    required this.child,
+  });
+
+  final ChapterDto chapter;
+  final MangaDto manga;
+  final String primaryStreamUrl;
+  final List<({String name, String url})> mirrors;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final autoLaunchedChapterId = useRef<int?>(null);
+    useEffect(() {
+      if (autoLaunchedChapterId.value != chapter.id) {
+        autoLaunchedChapterId.value = chapter.id;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!context.mounted) return;
+          launchUrlInAppBrowser(
+            context,
+            primaryStreamUrl,
+            ref.read(toastProvider),
+          );
+        });
+      }
+      return null;
+    }, [chapter.id, primaryStreamUrl]);
+
+    final cs = context.theme.colorScheme;
+    final sourceLabel =
+        (manga.source?.name ?? 'Video Stream').replaceAll('(Video)', '').trim();
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        child,
+        Positioned(
+          left: 16,
+          right: 16,
+          bottom: 24,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Material(
+                color: cs.surfaceContainerHigh.withValues(alpha: 0.96),
+                borderRadius: BorderRadius.circular(20),
+                elevation: 8,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.live_tv_rounded,
+                            color: cs.primary,
+                            size: 22,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${manga.title} • ${chapter.name}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: context.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      FilledButton.icon(
+                        onPressed: () => launchUrlInAppBrowser(
+                          context,
+                          primaryStreamUrl,
+                          ref.read(toastProvider),
+                        ),
+                        icon: const Icon(Icons.play_circle_fill_rounded),
+                        label: Text(
+                          'Play ${chapter.name} on $sourceLabel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (mirrors.length > 1) ...[
+                        const SizedBox(height: 8),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            spacing: 6,
+                            children: [
+                              for (final mirror in mirrors)
+                                ActionChip(
+                                  visualDensity: VisualDensity.compact,
+                                  avatar: const Icon(
+                                    Icons.play_arrow_rounded,
+                                    size: 16,
+                                  ),
+                                  label: Text(mirror.name),
+                                  onPressed: () => launchUrlInAppBrowser(
+                                    context,
+                                    mirror.url,
+                                    ref.read(toastProvider),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }

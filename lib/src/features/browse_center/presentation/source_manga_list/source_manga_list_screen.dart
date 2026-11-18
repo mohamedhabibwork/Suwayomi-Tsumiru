@@ -14,7 +14,10 @@ import '../../../../constants/db_keys.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/hooks/paging_controller_hook.dart';
+import '../../../../utils/launch_url_in_web.dart';
+import '../../../../utils/misc/toast/toast.dart';
 import '../../../../utils/motion/reduce_motion.dart';
+import '../../../../utils/video/video_stream_helper.dart';
 import '../../../../utils/webui_meta/webui_settings.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/desktop/desktop_view_switch.dart';
@@ -191,22 +194,44 @@ class SourceMangaListScreen extends HookConsumerWidget {
       (data) {
         final topBar = showsMergedTopBar(context);
         final title = Text(data?.displayName ?? context.l10n.source);
+        final isVideoSource = isVideoStreamingSource(data);
         final actions = <Widget>[
+          if (isVideoSource && data != null)
+            IconButton(
+              tooltip: 'Open Video Portal',
+              onPressed: () => launchUrlInAppBrowser(
+                context,
+                resolveSourceVideoPortalUrl(data, query: query.value),
+                ref.read(toastProvider),
+              ),
+              icon: Icon(
+                FluentIcons.play_circle_24_filled,
+                color: context.theme.colorScheme.primary,
+              ),
+            ),
           IconButton(
             onPressed: () => showSearch.value = true,
             icon: const Icon(FluentIcons.search_24_regular),
           ),
           const SourceMangaDisplayIconPopup(),
-          if (data?.homeUrl.isNotBlank ?? false)
+          if ((data?.homeUrl.isNotBlank ?? false) || isVideoSource)
             PopupMenuButton<void>(
               icon: const Icon(
                 FluentIcons.more_vertical_24_regular,
               ),
               itemBuilder: (_) => [
                 PopupMenuItem<void>(
-                  onTap: () =>
-                      openSourceHomepage(context, ref, data!.homeUrl),
-                  child: Text(context.l10n.openHomepage),
+                  onTap: () => openSourceHomepage(
+                    context,
+                    ref,
+                    data?.homeUrl,
+                    source: data,
+                  ),
+                  child: Text(
+                    isVideoSource
+                        ? 'Open Video Portal'
+                        : context.l10n.openHomepage,
+                  ),
                 ),
               ],
             ),
@@ -375,7 +400,7 @@ class SourceMangaListScreen extends HookConsumerWidget {
           );
 
           void openWebView() {
-            openSourceHomepage(context, ref, data?.homeUrl);
+            openSourceHomepage(context, ref, data?.homeUrl, source: data);
           }
 
           Widget switcherButton({

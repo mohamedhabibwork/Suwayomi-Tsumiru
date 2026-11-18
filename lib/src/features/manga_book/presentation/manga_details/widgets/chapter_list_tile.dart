@@ -18,7 +18,10 @@ import '../../../../../constants/db_keys.dart';
 import '../../../../../constants/enum.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../../utils/video/video_stream_helper.dart';
 import '../../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../../offline/presentation/offline_save_button.dart';
@@ -231,6 +234,19 @@ class ChapterListTile extends HookConsumerWidget {
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
+              if (isVideoStreamingManga(manga, chapter))
+                IconButton(
+                  tooltip: 'Play Episode',
+                  icon: Icon(
+                    FluentIcons.play_circle_24_filled,
+                    color: context.theme.colorScheme.primary,
+                  ),
+                  onPressed: () => launchUrlInAppBrowser(
+                    context,
+                    resolveVideoStreamUrl(manga: manga, chapter: chapter),
+                    ref.read(toastProvider),
+                  ),
+                ),
               OfflineSaveButton(chapterId: chapter.id),
               if (!manga.isLocalSource)
                 DownloadStatusIcon(
@@ -452,6 +468,27 @@ class ChapterListTile extends HookConsumerWidget {
                                 )
                               : null,
                         ),
+                        if (isVideoStreamingManga(manga, chapter))
+                          SizedBox(
+                            width: 32,
+                            child: IconButton(
+                              iconSize: 20,
+                              padding: EdgeInsets.zero,
+                              tooltip: 'Play Episode',
+                              onPressed: () => launchUrlInAppBrowser(
+                                context,
+                                resolveVideoStreamUrl(
+                                  manga: manga,
+                                  chapter: chapter,
+                                ),
+                                ref.read(toastProvider),
+                              ),
+                              icon: Icon(
+                                FluentIcons.play_circle_24_filled,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
                         SizedBox(
                           width: 32,
                           child: OfflineSaveButton(chapterId: chapter.id),

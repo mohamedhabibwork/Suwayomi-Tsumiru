@@ -13,6 +13,9 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../../constants/app_sizes.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
+import '../../../../../utils/launch_url_in_web.dart';
+import '../../../../../utils/misc/toast/toast.dart';
+import '../../../../../utils/video/video_stream_helper.dart';
 import '../../../../../widgets/server_image.dart';
 import '../../../../../widgets/web_route_link.dart';
 import '../../../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart'
@@ -112,6 +115,7 @@ class SourceCard extends HookConsumerWidget {
       icon: const Icon(FluentIcons.more_vertical_24_regular),
       onPressed: openButtonMenu,
     );
+    final isVideo = isVideoStreamingSource(source);
     final actionRow = SizedBox(
       height: 40 * browseCardTextScale(context),
       child: Row(
@@ -125,6 +129,22 @@ class SourceCard extends HookConsumerWidget {
                 alignment: AlignmentDirectional.centerStart,
               ),
               child: Text(context.l10n.latest),
+            ),
+          if (isVideo)
+            IconButton(
+              tooltip: 'Open Video Portal',
+              icon: Icon(
+                FluentIcons.play_circle_24_filled,
+                color: context.theme.colorScheme.primary,
+              ),
+              onPressed: () {
+                ref.read(sourceLastUsedProvider.notifier).update(source.id);
+                launchUrlInAppBrowser(
+                  context,
+                  resolveSourceVideoPortalUrl(source),
+                  ref.read(toastProvider),
+                );
+              },
             ),
           const Spacer(),
           _CardPinButton(source: source),

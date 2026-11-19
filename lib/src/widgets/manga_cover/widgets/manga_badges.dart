@@ -59,7 +59,9 @@ class MangaBadgesRow extends ConsumerWidget {
     final height = _stripHeight(context);
 
     if (!showCountBadges) {
-      if (!manga.user.inLibrary.ifNull()) return const SizedBox.shrink();
+      final inLib = manga.user.inLibrary.ifNull();
+      final totalCh = manga.chapters.totalCount;
+      if (!inLib && totalCh <= 0) return const SizedBox.shrink();
       return Padding(
         padding: padding ?? KEdgeInsets.a8.size,
         child: Row(
@@ -70,12 +72,19 @@ class MangaBadgesRow extends ConsumerWidget {
               height: height,
               side: BadgeSide.left,
               segments: [
-                _iconSegment(
-                  FluentIcons.library_24_regular,
-                  scheme.primary,
-                  scheme.onPrimary,
-                  height,
-                ),
+                if (inLib)
+                  _iconSegment(
+                    FluentIcons.library_24_regular,
+                    scheme.primary,
+                    scheme.onPrimary,
+                    height,
+                  ),
+                if (totalCh > 0)
+                  _textSegment(
+                    '$totalCh ch',
+                    scheme.secondaryContainer,
+                    scheme.onSecondaryContainer,
+                  ),
               ],
             ),
           ],
@@ -184,6 +193,15 @@ class MangaBadgesRow extends ConsumerWidget {
       final segment = segmentFor(placement.badge);
       if (segment == null) continue;
       (placement.side == BadgeSide.left ? left : right).add(segment);
+    }
+    if (manga.chapters.totalCount > 0) {
+      left.add(
+        _textSegment(
+          '${manga.chapters.totalCount} ch',
+          scheme.secondaryContainer,
+          scheme.onSecondaryContainer,
+        ),
+      );
     }
     if (left.isEmpty && right.isEmpty) return const SizedBox.shrink();
 

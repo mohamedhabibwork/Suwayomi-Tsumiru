@@ -17,17 +17,14 @@ enum DBKeys {
   serverPort(4567),
   serverPortToggle(false),
   onboardingComplete(false),
-  sourceLanguageFilter(["all", "lastUsed", "en", "localsourcelang"]),
+  sourceLanguageFilter(["all", "lastUsed", "en", "ar", "localsourcelang"]),
   // Source ids in descending migration priority.
   migrationTargetSources(<String>[]),
   migrationSourceSort(MigrationSourceSort.alphabetical),
   migrationSourceAscending(true),
   migrationSourceObsoleteOnly(false),
-  extensionLanguageFilter(["installed", "update", "en", "all"]),
+  extensionLanguageFilter(["installed", "update", "en", "ar", "all"]),
   selectedMediaResources(<String>[
-    'video_hianime',
-    'video_miruro',
-    'video_animepahe',
     'comic_webtoon',
     'comic_readcomics',
     'comic_tapas',
@@ -285,7 +282,10 @@ enum DBKeys {
   onlyNsfwMode(false),
   disabledExtensions(<String>[]),
   disabledExtensionStores(<String>[]),
-  crashlyticsEnabled(true);
+  crashlyticsEnabled(true),
+  autoUpdateExtensions(true),
+  newExtensionsDisabledByDefault(true),
+  showHistoryInBottomBar(true);
 
   const DBKeys(this.initial);
 

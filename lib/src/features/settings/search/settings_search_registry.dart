@@ -177,6 +177,16 @@ List<SettingsSearchEntry> get appearanceSettingsSearchEntries => [
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(
+    id: 'showHistoryInBottomBar',
+    title: (_) => 'Show History in Bottom Bar',
+    subtitle: (_) => 'Add a History button to the bottom navigation bar',
+    breadcrumb: (l) => '${l.appearance} › ${l.display}',
+    open: (c) => const AppearanceSettingsRoute(
+      highlight: 'showHistoryInBottomBar',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
     id: 'mangaThumbnailBackdrop',
     title: (l) => l.mangaThumbnailBackdrop,
     breadcrumb: (l) => '${l.appearance} › ${l.seriesPage}',
@@ -769,6 +779,37 @@ List<SettingsSearchEntry> get browseSettingsSearchEntries => [
         'Filter sources, extensions, library & history to show only +18 content',
     breadcrumb: (l) => l.browse,
     open: (c) => const BrowseSettingsRoute(highlight: 'onlyNsfwMode').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'autoUpdateExtensions',
+    title: (_) => 'Auto-Update Sources & Extensions',
+    subtitle: (_) =>
+        'Automatically check and update installed extensions and refresh sources',
+    breadcrumb: (l) => l.browse,
+    open: (c) =>
+        const BrowseSettingsRoute(highlight: 'autoUpdateExtensions').push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'newExtensionsDisabledByDefault',
+    title: (_) => 'New Extensions Disabled by Default',
+    subtitle: (_) =>
+        'Newly installed extensions start disabled until you toggle them on',
+    breadcrumb: (l) => l.browse,
+    open: (c) => const BrowseSettingsRoute(
+      highlight: 'newExtensionsDisabledByDefault',
+    ).push(c),
+    visible: (_, _) => true,
+  ),
+  SettingsSearchEntry(
+    id: 'browseCloudflareBypass',
+    title: (l) => l.cloudflareBypass,
+    subtitle: (_) => 'Configure FlareSolverr & WebView Cloudflare bypass',
+    breadcrumb: (l) => l.browse,
+    open: (c) => const BrowseSettingsRoute(
+      highlight: 'browseCloudflareBypass',
+    ).push(c),
     visible: (_, _) => true,
   ),
   SettingsSearchEntry(

@@ -106,7 +106,9 @@ class UpdatesGridCard extends HookConsumerWidget {
               fallbackCoverVersionOverride: manga.thumbnailUrlLastFetched,
               titleOverride: manga.title,
               badgeCountOverride: unread > 0 ? unread : null,
-              subtitle: head.name,
+              subtitle: head.sourceOrder > 0
+                  ? '${head.name} • ${head.sourceOrder} ch'
+                  : head.name,
               subtitleSuffix: tail.isNotEmpty
                   ? Builder(
                       builder: (anchorContext) => HoverTapTarget(

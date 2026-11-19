@@ -78,18 +78,47 @@ class ExtensionScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final extensionMapData = ref.watch(extensionMapFilteredAndQueriedProvider);
     final activeCategory = ref.watch(selectedResourceCategoryProvider);
+    final activeSort = ref.watch(selectedExtensionSortProvider);
+    final disabledPkgs = {
+      for (final p in ref.watch(disabledExtensionsProvider) ?? const <String>[])
+        p.trim().toLowerCase(),
+    };
 
-    List<Extension>? filterCategory(List<Extension>? list) => list
-        ?.where((e) => matchesExtensionCategory(e, activeCategory))
-        .toList();
+    List<Extension>? filterAndSortCategory(List<Extension>? list) {
+      if (list == null) return null;
+      final filtered = list
+          .where((e) => matchesExtensionCategory(e, activeCategory))
+          .toList();
+      filtered.sort((a, b) {
+        switch (activeSort) {
+          case ExtensionSortOption.nameAsc:
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case ExtensionSortOption.nameDesc:
+            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+          case ExtensionSortOption.language:
+            final la = normalizeExtensionLang(a);
+            final lb = normalizeExtensionLang(b);
+            final cmp = la.compareTo(lb);
+            return cmp != 0
+                ? cmp
+                : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case ExtensionSortOption.enabledFirst:
+            final aDis = disabledPkgs.contains(a.pkgName.trim().toLowerCase());
+            final bDis = disabledPkgs.contains(b.pkgName.trim().toLowerCase());
+            if (aDis != bDis) return aDis ? 1 : -1;
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        }
+      });
+      return filtered;
+    }
 
     final rawMap = {...?extensionMapData.value};
-    final installed = filterCategory(rawMap.remove("installed"));
-    final update = filterCategory(rawMap.remove("update"));
-    final all = filterCategory(rawMap.remove("all"));
+    final installed = filterAndSortCategory(rawMap.remove("installed"));
+    final update = filterAndSortCategory(rawMap.remove("update"));
+    final all = filterAndSortCategory(rawMap.remove("all"));
     final extensionMap = <String, List<Extension>>{
       for (final entry in rawMap.entries)
-        entry.key: filterCategory(entry.value) ?? const <Extension>[],
+        entry.key: filterAndSortCategory(entry.value) ?? const <Extension>[],
     };
 
     refresh() => ref.read(extensionActionsProvider).refreshList();
@@ -98,8 +127,15 @@ class ExtensionScreen extends HookConsumerWidget {
 
     useEffect(() {
       if (extensionMapData.isNotLoading) {
-        Future.microtask(() {
-          if (context.mounted) refresh();
+        Future.microtask(() async {
+          if (!context.mounted) return;
+          await refresh();
+          if (!context.mounted) return;
+          if (ref.read(autoUpdateExtensionsProvider) ?? true) {
+            await ref
+                .read(extensionActionsProvider)
+                .autoUpdateInstalledExtensions();
+          }
         });
       }
       return;
@@ -168,14 +204,6 @@ class ExtensionScreen extends HookConsumerWidget {
                 entry.key != "all")
               ...entry.value,
         ];
-        final topVideos = query.isBlank &&
-                (activeCategory == ResourceCategory.all ||
-                    activeCategory == ResourceCategory.videos)
-            ? selectTopVideoExtensions(
-                combinedAll,
-                enabledLanguages: enabledLangsSet,
-              )
-            : const <Extension>[];
         final topNovels = query.isBlank &&
                 (activeCategory == ResourceCategory.all ||
                     activeCategory == ResourceCategory.novels)
@@ -197,7 +225,6 @@ class ExtensionScreen extends HookConsumerWidget {
             installed.isNotBlank ||
             update.isNotBlank ||
             all.isNotBlank ||
-            topVideos.isNotEmpty ||
             topNovels.isNotEmpty ||
             top10Manga.isNotEmpty ||
             extensionMap.values.any((list) => list.isNotBlank);
@@ -217,7 +244,7 @@ class ExtensionScreen extends HookConsumerWidget {
                     label: Text(
                       addingStores.value
                           ? context.l10n.processing
-                          : 'Add All Default Stores (Manga, Video, Aidoku & Mangayomi)',
+                          : 'Add All Default Stores (Manga, Novels, Aidoku & Mangayomi)',
                     ),
                   ),
                 TextButton(
@@ -239,10 +266,10 @@ class ExtensionScreen extends HookConsumerWidget {
                     child: ListTile(
                       leading: const Icon(FluentIcons.star_24_regular),
                       title: const Text(
-                        'Add All Default Stores (Manga, Videos, Aidoku & Mangayomi)',
+                        'Add All Default Stores (Manga, Novels, Aidoku & Mangayomi)',
                       ),
                       subtitle: const Text(
-                        'Keiyoushi, Yuzono Anime, MO350AZ No-NSFW, FelipeGFA, Aidoku & Mangayomi',
+                        'Keiyoushi, LNReader Novels, Aidoku & Mangayomi (English & Arabic)',
                       ),
                       trailing: FilledButton(
                         onPressed:
@@ -257,76 +284,10 @@ class ExtensionScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-            if (topVideos.isNotEmpty)
-              ...extensionSet(
-                key: const ValueKey("top_videos"),
-                title: 'Top Video & Anime Extensions',
-                extensions: topVideos,
-                desktop: desktop,
-                headerTrailing: TextButton(
-                  onPressed: () async {
-                    final toInstall = topVideos
-                        .where((e) => !e.isInstalled)
-                        .take(4)
-                        .map((e) => e.pkgName)
-                        .toList();
-                    for (final pkg in toInstall) {
-                      try {
-                        await ref.read(extensionActionsProvider).install(pkg);
-                      } catch (_) {}
-                    }
-                  },
-                  child: const Text('Install Video Defaults'),
-                ),
-              ),
-            if (topNovels.isNotEmpty)
-              ...extensionSet(
-                key: const ValueKey("top_novels"),
-                title: 'Top Novel & Book Extensions',
-                extensions: topNovels,
-                desktop: desktop,
-                headerTrailing: TextButton(
-                  onPressed: () async {
-                    final toInstall = topNovels
-                        .where((e) => !e.isInstalled)
-                        .take(4)
-                        .map((e) => e.pkgName)
-                        .toList();
-                    for (final pkg in toInstall) {
-                      try {
-                        await ref.read(extensionActionsProvider).install(pkg);
-                      } catch (_) {}
-                    }
-                  },
-                  child: const Text('Install Novel Defaults'),
-                ),
-              ),
-            if (top10Manga.isNotEmpty)
-              ...extensionSet(
-                key: const ValueKey("top10"),
-                title: 'Top 10 Popular Manga Extensions',
-                extensions: top10Manga,
-                desktop: desktop,
-                headerTrailing: TextButton(
-                  onPressed: () async {
-                    final toInstall = top10Manga
-                        .where((e) => !e.isInstalled)
-                        .take(4)
-                        .map((e) => e.pkgName)
-                        .toList();
-                    for (final pkg in toInstall) {
-                      try {
-                        await ref.read(extensionActionsProvider).install(pkg);
-                      } catch (_) {}
-                    }
-                  },
-                  child: const Text('Install Defaults'),
-                ),
-              ),
             if (update.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("update"),
-                title: languageMap["update"]?.displayName ?? "",
+                title: languageMap["update"]?.displayName ?? "Updates Pending",
                 extensions: update,
                 desktop: desktop,
                 headerTrailing: TextButton(
@@ -350,7 +311,7 @@ class ExtensionScreen extends HookConsumerWidget {
             if (installed.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("installed"),
-                title: languageMap["installed"]?.displayName ?? "",
+                title: languageMap["installed"]?.displayName ?? "Installed",
                 extensions: installed,
                 desktop: desktop,
                 headerTrailing: Builder(
@@ -376,6 +337,20 @@ class ExtensionScreen extends HookConsumerWidget {
                     );
                   },
                 ),
+              ),
+            if (top10Manga.isNotEmpty)
+              ...extensionSet(
+                key: const ValueKey("top10"),
+                title: 'Top 10 Popular Manga Extensions (EN & AR)',
+                extensions: top10Manga,
+                desktop: desktop,
+              ),
+            if (topNovels.isNotEmpty)
+              ...extensionSet(
+                key: const ValueKey("top_novels"),
+                title: 'Top Novel & Book Extensions (EN & AR)',
+                extensions: topNovels,
+                desktop: desktop,
               ),
             if (all.isNotBlank)
               ...extensionSet(

@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../library/presentation/library/widgets/library_filter_segments.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../controller/updates_filter_controller.dart';
 import '../controller/updates_grouping_controller.dart';
 
@@ -73,6 +74,10 @@ class UpdatesFilterSegments extends ConsumerWidget {
           provider: updatesFilterBookmarkedProvider,
           onChanged: ref.read(updatesFilterBookmarkedProvider.notifier).update,
         ),
+        const SizedBox(height: 12),
+        const FilterSectionHeading('18+ / NSFW Filter'),
+        const SizedBox(height: 6),
+        const NsfwFilterChipsRow(),
       ],
     );
   }

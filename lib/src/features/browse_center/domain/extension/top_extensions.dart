@@ -43,18 +43,86 @@ const kMangayomiNovelStoreUrl =
 const kLnReaderNovelStoreUrl =
     'https://raw.githubusercontent.com/LNReader/lnreader-plugins/plugins/v3.0.0/.dist/plugins.min.json';
 
+/// Nyora Mihon Extension Store (from Miyomi Extensions Directory).
+const kNyoraMihonStoreUrl =
+    'https://raw.githubusercontent.com/Nyora-Manga/nyora-mihon/main/index.min.json';
+
+/// Suwayomi Official Extension Store (from Miyomi Extensions Directory).
+const kSuwayomiOfficialStoreUrl =
+    'https://raw.githubusercontent.com/Suwayomi/tachiyomi-extension/repo/index.min.json';
+
+/// Yuzono Cursed Manga Repo (Protobuf, from Miyomi Extensions Directory).
+const kYuzonoCursedMangaStoreUrl =
+    'https://github.com/yuzono/cursed-manga-repo/raw/repo/index.pb';
+
+/// Kavita Extension Store (from Miyomi Extensions Directory).
+const kKavitaStoreUrl =
+    'https://raw.githubusercontent.com/Kareadita/tach-extension/repo/index.min.json';
+
+/// Novel Sourcery Extension Store (Protobuf, from Miyomi Extensions Directory).
+const kNovelSourceryStoreUrl =
+    'https://github.com/novelsourcery/extensions/raw/repo/index.pb';
+
+/// IReader Novel Extensions Store (from Miyomi Extensions Directory).
+const kIReaderNovelStoreUrl =
+    'https://raw.githubusercontent.com/IReaderorg/IReader-extensions/repov2/index.min.json';
+
+/// Bunori Light Novel Extensions Store (from Miyomi Extensions Directory).
+const kBunoriNovelStoreUrl =
+    'https://bunoriapp.github.io/extensions/index.min.json';
+
+/// Swakshan Mangayomi Manga Store (from Miyomi Extensions Directory).
+const kSwakshanMangaStoreUrl =
+    'https://raw.githubusercontent.com/Swakshan/mangayomi-swak-extensions/refs/heads/main/index.json';
+
+/// Swakshan Mangayomi Novel Store (from Miyomi Extensions Directory).
+const kSwakshanNovelStoreUrl =
+    'https://raw.githubusercontent.com/Swakshan/mangayomi-swak-extensions/refs/heads/main/novel_index.json';
+
+/// Kegareta Sauces Manga Store (from Miyomi Extensions Directory).
+const kKegaretaMangaStoreUrl =
+    'https://raw.githubusercontent.com/gato404/kegareta-sauces/main/index.json';
+
+/// Mally Mangayomi Manga Store (from Miyomi Extensions Directory).
+const kMallyMangaStoreUrl =
+    'https://raw.githubusercontent.com/Mallyd11/mangayomi-anime-extensions/main/index.json';
+
+/// Mally Mangayomi Novel Store (from Miyomi Extensions Directory).
+const kMallyNovelStoreUrl =
+    'https://raw.githubusercontent.com/Mallyd11/mangayomi-anime-extensions/main/novel_index.json';
+
 /// Livid96 Aniyomi Adult Extensions store (18+ / NSFW).
 const kLividAdultVideoStoreUrl =
     'https://raw.githubusercontent.com/Livid96/Aniyomi-Adult-Extensions/main/index.min.json';
 
-/// Returns true if [url] is one of the legacy redundant mirror URLs that
-/// duplicate Keiyoushi or Aidoku Community.
+/// Allowed content language codes across the app: English (`en`), Arabic (`ar`),
+/// multi-language (`all`), and Local Source (`localsourcelang`).
+const Set<String> kAllowedContentLanguageCodes = {
+  'en',
+  'ar',
+  'all',
+  'localsourcelang',
+};
+
+bool isAllowedContentLanguage(String rawCode) {
+  final code = rawCode.trim().toLowerCase();
+  if (code.isEmpty) return false;
+  if (kAllowedContentLanguageCodes.contains(code)) return true;
+  if (code.startsWith('en-') || code.startsWith('en_')) return true;
+  if (code.startsWith('ar-') || code.startsWith('ar_')) return true;
+  return false;
+}
+
+/// Returns true if [url] is one of the legacy redundant mirror URLs or video stores.
 bool isRedundantDuplicateStoreUrl(String url) {
   final lower = url.trim().toLowerCase();
   return lower == kKeiyoushiLegacyGithubUrl.toLowerCase() ||
       lower.contains('mo350az/extensions-no-nsfw') ||
       lower.contains('felipegfa/extensoes') ||
-      lower.contains('dddinmx/mangadock-extensions');
+      lower.contains('dddinmx/mangadock-extensions') ||
+      lower.contains('yuzono/anime') ||
+      lower.contains('anime_index.json') ||
+      lower.contains('aniyomi-adult-extensions');
 }
 
 /// Normalizes an extension store URL so equivalent URLs (e.g. github.com/raw vs
@@ -111,72 +179,144 @@ class CuratedStoreSpec {
 
 const List<CuratedStoreSpec> kCuratedExtensionStores = [
   CuratedStoreSpec(
-    name: 'Keiyoushi Official Store (Default)',
-    subtitle: 'Top Manga, Manhwa, Manhua & Webtoon extensions',
+    name: 'Keiyoushi Official Store (Miyomi)',
+    subtitle: 'Top Manga, Manhwa, Manhua & Webtoon extensions (EN & AR)',
     indexUrl: kKeiyoushiStoreUrl,
     category: ResourceCategory.manga,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Yuzono Anime & Video Store (Default)',
-    subtitle: 'Anime, Donghua & Video streaming extension sources',
-    indexUrl: kYuzonoAnimePbStoreUrl,
-    category: ResourceCategory.videos,
+    name: 'Nyora Mihon Extension Store (Miyomi)',
+    subtitle: 'Miyomi curated Manga & Webtoon extension repository (EN & AR)',
+    indexUrl: kNyoraMihonStoreUrl,
+    category: ResourceCategory.manga,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'LNReader Novel Plugins Store (Default)',
-    subtitle: '370+ Light Novel & Web Novel sources (EN, AR, ES, FR & more)',
+    name: 'Suwayomi Official Extension Store (Miyomi)',
+    subtitle: 'Suwayomi Tachiyomi Manga & Comic extensions (EN & AR)',
+    indexUrl: kSuwayomiOfficialStoreUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Yuzono Cursed Manga Repo (Miyomi)',
+    subtitle: 'Yuzono Manga & Comic extensions repository',
+    indexUrl: kYuzonoCursedMangaStoreUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Kavita Extension Store (Miyomi)',
+    subtitle: 'Kavita self-hosted Manga & Comic reader extension',
+    indexUrl: kKavitaStoreUrl,
+    category: ResourceCategory.manga,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'LNReader Novel Plugins Store (Miyomi)',
+    subtitle: 'Light Novel & Web Novel sources (English & Arabic)',
     indexUrl: kLnReaderNovelStoreUrl,
     category: ResourceCategory.novels,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Mangayomi Novel & Book Store (Default)',
+    name: 'Novel Sourcery Store (Miyomi)',
+    subtitle: 'Light Novel & Web Novel protobuf repository',
+    indexUrl: kNovelSourceryStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'IReader Novel Extensions (Miyomi)',
+    subtitle: 'IReader Light Novel & Book sources (English & Arabic)',
+    indexUrl: kIReaderNovelStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Bunori Light Novel Extensions (Miyomi)',
+    subtitle: 'Bunori Light Novel & Web Novel extensions',
+    indexUrl: kBunoriNovelStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mangayomi Novel & Book Store (m2k3a • Miyomi)',
     subtitle: 'RoyalRoad, Web Novel Translations & free book sources',
     indexUrl: kMangayomiNovelStoreUrl,
     category: ResourceCategory.novels,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Aidoku Community Sources (Default)',
-    subtitle: 'Aidoku multi-language Manga & Comic sources',
+    name: 'Swakshan Novel Store (Miyomi)',
+    subtitle: 'Swakshan Mangayomi Light Novel & Book sources',
+    indexUrl: kSwakshanNovelStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mally Novel Store (Miyomi)',
+    subtitle: 'Mally Mangayomi Light Novel & Book sources',
+    indexUrl: kMallyNovelStoreUrl,
+    category: ResourceCategory.novels,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Aidoku Community Sources (Miyomi)',
+    subtitle: 'Aidoku Manga & Comic sources (English & Arabic)',
     indexUrl: kAidokuCommunityStoreUrl,
     category: ResourceCategory.other,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Mangayomi Extensions Store (Default)',
-    subtitle: 'Mangayomi multi-source Manga & Comic extensions',
+    name: 'Mangayomi Extensions Store (m2k3a • Miyomi)',
+    subtitle: 'Mangayomi Manga & Comic extensions (English & Arabic)',
     indexUrl: kMangayomiMangaStoreUrl,
     category: ResourceCategory.other,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Mangayomi Anime & Video Store (Default)',
-    subtitle: 'Mangayomi Anime & Video streaming sources',
-    indexUrl: kMangayomiAnimeStoreUrl,
-    category: ResourceCategory.videos,
+    name: 'Swakshan Manga Store (Miyomi)',
+    subtitle: 'Swakshan Mangayomi Manga & Webtoon extensions',
+    indexUrl: kSwakshanMangaStoreUrl,
+    category: ResourceCategory.other,
     isDefault: true,
   ),
   CuratedStoreSpec(
-    name: 'Aniyomi Adult Video Extensions (18+)',
-    subtitle: '18+ Adult video extension sources (Livid96)',
-    indexUrl: kLividAdultVideoStoreUrl,
-    category: ResourceCategory.videos,
-    isNsfw: true,
+    name: 'Kegareta Sauces Manga Store (Miyomi)',
+    subtitle: 'Kegareta Sauces Mangayomi Manga & Comic sources',
+    indexUrl: kKegaretaMangaStoreUrl,
+    category: ResourceCategory.other,
+    isDefault: true,
+  ),
+  CuratedStoreSpec(
+    name: 'Mally Manga Store (Miyomi)',
+    subtitle: 'Mally Mangayomi Manga & Comic sources',
+    indexUrl: kMallyMangaStoreUrl,
+    category: ResourceCategory.other,
+    isDefault: true,
   ),
 ];
 
 enum ResourceCategory {
   all('All Sources'),
   manga('Manga & Webtoons'),
-  videos('Videos & Anime'),
   novels('Novels & Books'),
   comics('Comics'),
   other('Aidoku & Mangayomi');
 
   const ResourceCategory(this.label);
+  final String label;
+}
+
+enum ExtensionSortOption {
+  nameAsc('Name (A–Z)'),
+  nameDesc('Name (Z–A)'),
+  language('Language (AR / EN)'),
+  enabledFirst('Enabled First');
+
+  const ExtensionSortOption(this.label);
   final String label;
 }
 
@@ -215,16 +355,14 @@ bool isComicExtension(Extension e) {
 }
 
 bool matchesExtensionCategory(Extension e, ResourceCategory category) =>
+    !isVideoExtension(e) &&
     switch (category) {
       ResourceCategory.all => true,
-      ResourceCategory.videos => isVideoExtension(e),
       ResourceCategory.novels => isNovelExtension(e),
       ResourceCategory.comics => isComicExtension(e),
       ResourceCategory.other => isAidokuOrMangayomiExtension(e),
       ResourceCategory.manga =>
-        !isVideoExtension(e) &&
-            !isNovelExtension(e) &&
-            !isAidokuOrMangayomiExtension(e),
+        !isNovelExtension(e) && !isAidokuOrMangayomiExtension(e),
     };
 
 bool isNovelSource(SourceDto s) {
@@ -266,16 +404,14 @@ bool isComicSource(SourceDto s) {
 }
 
 bool matchesSourceCategory(SourceDto s, ResourceCategory category) =>
+    !isVideoSource(s) &&
     switch (category) {
       ResourceCategory.all => true,
-      ResourceCategory.videos => isVideoSource(s),
       ResourceCategory.novels => isNovelSource(s),
       ResourceCategory.comics => isComicSource(s),
       ResourceCategory.other => isAidokuOrMangayomiSource(s),
       ResourceCategory.manga =>
-        !isVideoSource(s) &&
-            !isNovelSource(s) &&
-            !isAidokuOrMangayomiSource(s),
+        !isNovelSource(s) && !isAidokuOrMangayomiSource(s),
     };
 
 class SelectedMediaResources extends Notifier<List<String>?>
@@ -303,6 +439,18 @@ class SelectedResourceCategory extends Notifier<ResourceCategory> {
 final selectedResourceCategoryProvider =
     NotifierProvider<SelectedResourceCategory, ResourceCategory>(
       SelectedResourceCategory.new,
+    );
+
+class SelectedExtensionSort extends Notifier<ExtensionSortOption> {
+  @override
+  ExtensionSortOption build() => ExtensionSortOption.nameAsc;
+
+  void select(ExtensionSortOption option) => state = option;
+}
+
+final selectedExtensionSortProvider =
+    NotifierProvider<SelectedExtensionSort, ExtensionSortOption>(
+      SelectedExtensionSort.new,
     );
 
 /// Curated Top 10 English Tachiyomi/Keiyoushi manga & webtoon extensions.
@@ -349,12 +497,14 @@ const List<({String label, List<String> matchTerms})> kTopNovelExtensionSpecs = 
 
 bool _matchesEnabledLangs(Extension e, Set<String>? enabledLanguages) {
   final lang = (e.language?.code ?? e.lang).trim().toLowerCase();
+  if (!isAllowedContentLanguage(lang)) return false;
   if (enabledLanguages == null) {
-    return lang == 'en' || lang == 'all';
+    return lang == 'en' || lang == 'ar' || lang == 'all';
   }
   final contentLangs = {
     for (final c in enabledLanguages)
-      if (c != 'installed' && c != 'update') c.toLowerCase(),
+      if (c != 'installed' && c != 'update' && isAllowedContentLanguage(c))
+        c.toLowerCase(),
   };
   if (contentLangs.isEmpty) return false;
   return contentLangs.contains(lang);
@@ -386,31 +536,11 @@ List<Extension> selectTop10Extensions(
   return picked;
 }
 
-/// Selects top Video & Anime extensions that install as real sources.
+/// Video extensions have been removed; always returns an empty list.
 List<Extension> selectTopVideoExtensions(
   Iterable<Extension> extensions, {
   Set<String>? enabledLanguages,
-}) {
-  final videoPool = extensions
-      .where(
-        (e) => isVideoExtension(e) && _matchesEnabledLangs(e, enabledLanguages),
-      )
-      .toList();
-  if (videoPool.isEmpty) return const <Extension>[];
-  final picked = _pickMatchingExtensions(
-    videoPool,
-    kTopVideoExtensionSpecs,
-  );
-  if (picked.length >= 6) return picked;
-  final seen = {for (final e in picked) e.pkgName};
-  for (final ext in videoPool) {
-    if (seen.add(ext.pkgName)) {
-      picked.add(ext);
-      if (picked.length >= 10) break;
-    }
-  }
-  return picked;
-}
+}) => const <Extension>[];
 
 /// Selects top Novel & Book extensions that install as real sources.
 List<Extension> selectTopNovelExtensions(

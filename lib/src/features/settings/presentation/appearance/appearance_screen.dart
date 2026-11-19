@@ -55,6 +55,36 @@ class HideBottomTabLabelsTile extends ConsumerWidget {
   }
 }
 
+class ShowHistoryInBottomBarNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.showHistoryInBottomBar);
+}
+
+final showHistoryInBottomBarProvider =
+    NotifierProvider<ShowHistoryInBottomBarNotifier, bool?>(
+  ShowHistoryInBottomBarNotifier.new,
+);
+
+class ShowHistoryInBottomBarTile extends ConsumerWidget {
+  const ShowHistoryInBottomBarTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showHistory =
+        ref.watch(showHistoryInBottomBarProvider) ??
+        (DBKeys.showHistoryInBottomBar.initial as bool);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('Show History in Bottom Bar'),
+      subtitle: const Text('Add a History button to the bottom navigation bar'),
+      value: showHistory,
+      onChanged: (v) =>
+          ref.read(showHistoryInBottomBarProvider.notifier).update(v),
+    );
+  }
+}
+
 class AppearanceScreen extends ConsumerWidget {
   const AppearanceScreen({super.key});
 
@@ -116,6 +146,10 @@ class AppearanceScreen extends ConsumerWidget {
                     SettingsHighlightTarget(
                       id: 'hideBottomTabLabels',
                       child: HideBottomTabLabelsTile(),
+                    ),
+                    SettingsHighlightTarget(
+                      id: 'showHistoryInBottomBar',
+                      child: ShowHistoryInBottomBarTile(),
                     ),
                   ],
                 ),

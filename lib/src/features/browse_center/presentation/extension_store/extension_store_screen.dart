@@ -112,6 +112,9 @@ class ExtensionStoreScreen extends ConsumerWidget {
                         showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
                     final stores = (data?.stores ?? const <ExtensionStore>[])
                         .where((s) {
+                          if (isRedundantDuplicateStoreUrl(s.indexUrl)) {
+                            return false;
+                          }
                           final isAdultStore =
                               s.name.contains('18+') ||
                               s.indexUrl.toLowerCase().contains('adult');
@@ -177,10 +180,8 @@ class ExtensionStoreScreen extends ConsumerWidget {
                           for (final preset in availablePresets)
                             Card(
                               child: ListTile(
-                                leading: Icon(
-                                  preset.category == ResourceCategory.videos
-                                      ? FluentIcons.video_24_regular
-                                      : FluentIcons.star_24_regular,
+                                leading: const Icon(
+                                  FluentIcons.star_24_regular,
                                 ),
                                 title: Text(preset.name),
                                 subtitle: Text(preset.subtitle),
@@ -271,7 +272,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                               ? null
                                               : () => showDialog(
                                                   context: context,
-                                                  builder: (_) => AlertDialog(
+                                                  builder: (dialogContext) => AlertDialog(
                                                     title: Text(
                                                       context
                                                           .l10n
@@ -288,7 +289,7 @@ class ExtensionStoreScreen extends ConsumerWidget {
                                                       const PopButton(),
                                                       ElevatedButton(
                                                         onPressed: () {
-                                                          Navigator.pop(context);
+                                                          Navigator.pop(dialogContext);
                                                           removeStore(store);
                                                         },
                                                         child: Text(

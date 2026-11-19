@@ -294,7 +294,11 @@ class _HeadTile extends HookConsumerWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            chapter.name,
+                            [
+                              chapter.name,
+                              if (chapter.sourceOrder > 0)
+                                context.l10n.noOfChapters(chapter.sourceOrder),
+                            ].join(' • '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../constants/app_sizes.dart';
 import '../../../features/manga_book/domain/manga/manga_model.dart';
+import '../../../utils/extensions/custom_extensions.dart';
 import '../../server_image.dart';
 import '../../web_route_link.dart';
 import '../widgets/continue_reading_button.dart';
@@ -157,14 +158,32 @@ class _MangaCoverListTileState extends State<MangaCoverListTile> {
               Expanded(
                 child: Padding(
                   padding: KEdgeInsets.h8.size,
-                  // Skia uncapped ellipsis collapses to one line; use clip for wrapping.
-                  child: Text(
-                    widget.manga.title,
-                    softWrap: true,
-                    overflow: widget.limitTitleLines
-                        ? TextOverflow.ellipsis
-                        : TextOverflow.clip,
-                    maxLines: widget.limitTitleLines ? 3 : null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Skia uncapped ellipsis collapses to one line; use clip for wrapping.
+                      Text(
+                        widget.manga.title,
+                        softWrap: true,
+                        overflow: widget.limitTitleLines
+                            ? TextOverflow.ellipsis
+                            : TextOverflow.clip,
+                        maxLines: widget.limitTitleLines ? 2 : null,
+                      ),
+                      if (widget.manga.chapters.totalCount > 0)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            context.l10n.noOfChapters(
+                              widget.manga.chapters.totalCount,
+                            ),
+                            style: context.textTheme.labelSmall?.copyWith(
+                              color: context.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),

@@ -86,8 +86,35 @@ final disabledExtensionStoresProvider =
       DisabledExtensionStoresNotifier.new,
     );
 
+/// Automatically updates installed extensions and refreshes sources when enabled.
+class AutoUpdateExtensionsNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.autoUpdateExtensions);
+}
+
+final autoUpdateExtensionsProvider =
+    NotifierProvider<AutoUpdateExtensionsNotifier, bool?>(
+      AutoUpdateExtensionsNotifier.new,
+    );
+
+/// When enabled (default: true), newly installed extensions start in Disabled state
+/// until the user toggles them on.
+class NewExtensionsDisabledByDefaultNotifier extends Notifier<bool?>
+    with SharedPreferenceClientMixin<bool> {
+  @override
+  bool? build() => initialize(DBKeys.newExtensionsDisabledByDefault);
+}
+
+final newExtensionsDisabledByDefaultProvider =
+    NotifierProvider<NewExtensionsDisabledByDefaultNotifier, bool?>(
+      NewExtensionsDisabledByDefaultNotifier.new,
+    );
+
 String normalizeExtensionLang(Extension e) {
   final raw = (e.language?.code ?? e.lang).trim().toLowerCase();
+  if (raw.startsWith('en-') || raw.startsWith('en_')) return 'en';
+  if (raw.startsWith('ar-') || raw.startsWith('ar_')) return 'ar';
   return raw.isEmpty ? 'other' : raw;
 }
 
@@ -140,6 +167,9 @@ AsyncValue<Map<String, List<Extension>>> extensionMap(Ref ref) {
     for (final u in disabledStoresRaw) normalizeExtensionStoreUrl(u),
   };
   for (final e in extensionList) {
+    if (isVideoExtension(e)) continue;
+    final extLang = normalizeExtensionLang(e);
+    if (!isAllowedContentLanguage(extLang)) continue;
     final isNsfw = isNsfwFromWarning(e.contentWarning);
     if (!showNsfw && isNsfw) continue;
     if (onlyNsfw && !isNsfw) continue;
@@ -187,17 +217,23 @@ List<String> extensionFilterLangList(Ref ref) {
   ]);
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
   final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
-  final codes = <String>{};
+  final codes = <String>{'en', 'ar', 'all'};
   for (final e in extensionList) {
+    if (isVideoExtension(e)) continue;
+    final extLang = normalizeExtensionLang(e);
+    if (!isAllowedContentLanguage(extLang)) continue;
     final isNsfw = isNsfwFromWarning(e.contentWarning);
     if (!showNsfw && isNsfw) continue;
     if (onlyNsfw && !isNsfw) continue;
-    codes.add(normalizeExtensionLang(e));
+    codes.add(extLang);
   }
   final mapKeys = {...?ref.watch(extensionMapProvider).value?.keys};
   mapKeys.remove("installed");
   mapKeys.remove("update");
-  codes.addAll(mapKeys.map((k) => k.toLowerCase()));
+  for (final k in mapKeys) {
+    final lower = k.toLowerCase();
+    if (isAllowedContentLanguage(lower)) codes.add(lower);
+  }
   return codes.toList()..sort();
 }
 
@@ -214,13 +250,16 @@ AsyncValue<Map<String, List<Extension>>> extensionMapFiltered(Ref ref) {
   final extensionMapData = ref.watch(extensionMapProvider);
   final extensionMap = {...?extensionMapData.value};
   final rawEnabled = ref.watch(extensionLanguageFilterProvider) ??
-      const <String>['installed', 'update', 'en', 'all'];
+      const <String>['installed', 'update', 'en', 'ar', 'all'];
   final enabledSet = {
     for (final code in rawEnabled) code.trim().toLowerCase(),
   };
   final enabledContentLangs = {
     for (final code in enabledSet)
-      if (code != 'installed' && code != 'update') code,
+      if (code != 'installed' &&
+          code != 'update' &&
+          isAllowedContentLanguage(code))
+        code,
   };
 
   bool matchesSelectedLangs(Extension ext) {

@@ -8,18 +8,13 @@ import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
-import '../../../../utils/misc/toast/toast.dart';
 import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
-import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/top_extensions.dart';
-import '../extension/controller/extension_actions.dart';
-import '../extension/controller/extension_controller.dart';
-import '../source/controller/source_controller.dart';
 
 IconData iconForResourceCategory(ResourceCategory category) =>
     switch (category) {
-      ResourceCategory.videos => FluentIcons.video_24_regular,
       ResourceCategory.novels => FluentIcons.book_letter_24_regular,
       ResourceCategory.comics => FluentIcons.book_open_24_regular,
       ResourceCategory.other => FluentIcons.library_24_regular,
@@ -38,6 +33,7 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeCategory = ref.watch(selectedResourceCategoryProvider);
+    final activeSort = ref.watch(selectedExtensionSortProvider);
     final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
     final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
     return SingleChildScrollView(
@@ -55,6 +51,34 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
                   .read(selectedResourceCategoryProvider.notifier)
                   .select(category),
             ),
+          PopupMenuButton<ExtensionSortOption>(
+            tooltip: 'Sort Sources & Extensions',
+            onSelected: (option) => ref
+                .read(selectedExtensionSortProvider.notifier)
+                .select(option),
+            itemBuilder: (context) => [
+              for (final opt in ExtensionSortOption.values)
+                PopupMenuItem(
+                  value: opt,
+                  child: Row(
+                    children: [
+                      Icon(
+                        activeSort == opt
+                            ? FluentIcons.checkmark_24_regular
+                            : FluentIcons.arrow_sort_24_regular,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(opt.label),
+                    ],
+                  ),
+                ),
+            ],
+            child: Chip(
+              avatar: const Icon(FluentIcons.arrow_sort_24_regular, size: 16),
+              label: Text('Sort: ${activeSort.label}'),
+            ),
+          ),
           FilterChip(
             selected: showNsfw,
             avatar: Icon(
@@ -73,55 +97,11 @@ class ResourceCategoryFilterBar extends ConsumerWidget {
             onSelected: (v) => setOnlyNsfwMode(ref, v),
           ),
           ActionChip(
-            avatar: const Icon(
-              FluentIcons.checkmark_circle_24_regular,
-              size: 16,
-            ),
-            label: const Text('Install Defaults'),
-            onPressed: () async {
-              final toast = ref.read(toastProvider);
-              toast?.show(
-                'Syncing default Manga, Video, Novel, Aidoku & Mangayomi stores...',
-              );
-              final storeList = await ref.read(extensionStoreListProvider.future);
-              final existingUrls = {
-                ...?storeList?.stores.map((s) => s.indexUrl),
-              };
-              for (final preset in kCuratedExtensionStores.where(
-                (s) => s.isDefault && !s.isNsfw,
-              )) {
-                if (isExtensionStoreUrlPresent(preset.indexUrl, existingUrls)) {
-                  continue;
-                }
-                try {
-                  await ref
-                      .read(extensionStoreRepositoryProvider)
-                      .addStore(preset.indexUrl);
-                } catch (_) {}
-              }
-              await ref.read(extensionActionsProvider).refreshList();
-              final extList = await ref.read(extensionProvider.future);
-              if (extList != null) {
-                final topManga = selectTop10Extensions(extList)
-                    .where((e) => !e.isInstalled)
-                    .take(2);
-                final topVideo = selectTopVideoExtensions(extList)
-                    .where((e) => !e.isInstalled)
-                    .take(2);
-                final topNovel = selectTopNovelExtensions(extList)
-                    .where((e) => !e.isInstalled)
-                    .take(2);
-                for (final ext in [...topManga, ...topVideo, ...topNovel]) {
-                  try {
-                    await ref.read(extensionActionsProvider).install(ext.pkgName);
-                  } catch (_) {}
-                }
-              }
-              // ignore: unused_result
-              ref.refresh(sourceListProvider.future);
-              onSelectDefaults?.call();
-              toast?.show('Default Manga, Video & Novel sources installed');
-            },
+            avatar: const Icon(FluentIcons.shield_task_24_regular, size: 16),
+            label: Text(context.l10n.cloudflareBypass),
+            onPressed: () => const ServerNetworkRoute(
+              highlight: 'flareSolverr',
+            ).push(context),
           ),
         ],
       ),

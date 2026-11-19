@@ -20,6 +20,7 @@ import 'features/auth/presentation/reauth_banner.dart';
 import 'features/notifications/controller/notifications_controller.dart';
 import 'features/notifications/data/background/notification_worker.dart';
 import 'features/notifications/data/local_notification_service.dart';
+import 'features/settings/presentation/appearance/widgets/app_language/app_language_tile.dart';
 import 'features/settings/presentation/appearance/widgets/app_theme_selector/app_theme_providers.dart';
 import 'features/settings/presentation/appearance/widgets/is_true_black/is_true_black_tile.dart';
 import 'features/settings/presentation/general/widgets/force_portrait_tile.dart';
@@ -207,8 +208,11 @@ class TsumiruApp extends HookConsumerWidget {
         // gen-l10n's list registers flutter/material's delegates, not material_ui's.
         ...GlobalMaterialLocalizations.delegates,
       ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      locale: appLocale,
+      supportedLocales: kSupportedAppLocales,
+      locale: appLocale != null &&
+              (appLocale.languageCode == 'en' || appLocale.languageCode == 'ar')
+          ? Locale(appLocale.languageCode)
+          : null,
       routerConfig: routes,
     );
   }

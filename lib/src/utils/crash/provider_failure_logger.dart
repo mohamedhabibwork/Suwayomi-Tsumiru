@@ -22,13 +22,29 @@ final class ProviderFailureLogger extends ProviderObserver {
   final DateTime Function() _now;
   final _logged = <String>{};
 
+  bool _isExpectedTransientFailure(Object error) {
+    final msg = error.toString();
+    if (error is StateError &&
+        (msg.contains('Authentication session changed') ||
+            msg.contains('Server identity changed'))) {
+      return true;
+    }
+    if (msg.contains('eu.kanade.tachiyomi.network.HttpException') ||
+        msg.contains('HTTP error 4') ||
+        msg.contains('HTTP error 5') ||
+        msg.contains('Cloudflare')) {
+      return true;
+    }
+    return false;
+  }
+
   @override
   void providerDidFail(
     ProviderObserverContext context,
     Object error,
     StackTrace stackTrace,
   ) {
-    if (isConnectionError(error)) return;
+    if (isConnectionError(error) || _isExpectedTransientFailure(error)) return;
     final provider = context.provider;
     final name = provider.name ?? provider.runtimeType.toString();
     final argument = provider.argument;

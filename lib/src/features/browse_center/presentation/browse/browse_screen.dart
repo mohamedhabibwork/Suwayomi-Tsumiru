@@ -10,6 +10,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_hooks/material_hooks.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../constants/enum.dart';
+import '../../../../routes/navigation.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/motion/reduce_motion.dart';
@@ -25,6 +27,7 @@ import '../extension/controller/extension_controller.dart';
 import '../extension/controller/extension_update_badge.dart';
 import '../extension/widgets/extension_language_filter_dialog.dart';
 import '../extension/widgets/install_extension_file.dart';
+import '../global_search/controller/source_quick_search_controller.dart';
 import '../source/controller/source_controller.dart' hide SourceLanguageFilter;
 import '../source/widgets/source_language_filter.dart';
 import 'browse_filter_panel.dart';
@@ -74,6 +77,16 @@ class BrowseScreen extends HookConsumerWidget {
     final search = _BrowseDesktopSearch(tabIndex: tabController.index);
     final actions = <Widget>[
       if (tabController.index == 0) ...[
+        IconButton(
+          tooltip: 'Search by Tag in All Sources',
+          icon: const Icon(FluentIcons.globe_search_24_regular),
+          onPressed: () {
+            ref
+                .read(globalSearchScopeProvider.notifier)
+                .update(GlobalSearchSourceFilter.all);
+            openGlobalSearch(context);
+          },
+        ),
         if (phone && !persistentBox) ...[
           const PhoneSearchClearFilter(origin: PhoneSearchOrigin.sources),
           const PhoneSearchEntry(origin: PhoneSearchOrigin.sources),

@@ -10,12 +10,15 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../routes/router_config.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
+import '../../../../widgets/compact_switch.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/input_popup/domain/settings_prop_type.dart';
 import '../../../../widgets/input_popup/settings_prop_tile.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
 import '../../../account/data/account_providers.dart';
 import '../../../browse_center/data/extension_store_repository/extension_store_repository.dart';
+import '../../../browse_center/presentation/extension/controller/extension_actions.dart';
+import '../../../browse_center/presentation/extension/controller/extension_controller.dart';
 import '../../controller/server_controller.dart';
 import '../../domain/settings/settings.dart';
 import '../../search/settings_search_registry.dart';
@@ -35,6 +38,7 @@ class BrowseSettingsScreen extends ConsumerWidget {
     final repository = ref.watch(browseSettingsRepositoryProvider);
     final serverSettings = ref.watch(settingsProvider);
     final BrowserSettingsDto? browseSettings = serverSettings.value;
+    final CloudFlareBypassDto? cfSettings = serverSettings.value;
     onRefresh() => ref.refresh(settingsProvider.future);
     final storeCount = ref.watch(extensionStoreListProvider).value?.totalCount;
     final topBar = showsMergedTopBar(context);
@@ -146,6 +150,33 @@ class BrowseSettingsScreen extends ConsumerWidget {
                           child: OnlyNsfwModeTile(),
                         ),
                         const AutoHideNsfwOnCloseTile(),
+                        const SettingsHighlightTarget(
+                          id: 'autoUpdateExtensions',
+                          child: AutoUpdateExtensionsTile(),
+                        ),
+                        const SettingsHighlightTarget(
+                          id: 'newExtensionsDisabledByDefault',
+                          child: NewExtensionsDisabledByDefaultTile(),
+                        ),
+                      ],
+                    ),
+                    SettingsGroupHeading(label: context.l10n.cloudflareBypass),
+                    SettingsGroupCard(
+                      children: [
+                        SettingsHighlightTarget(
+                          id: 'browseCloudflareBypass',
+                          child: ListTile(
+                            title: Text(context.l10n.cloudflareBypass),
+                            subtitle: Text(
+                              cfSettings?.flareSolverrEnabled == true
+                                  ? '${context.l10n.flareSolverr} • ${cfSettings?.flareSolverrUrl ?? ''}'
+                                  : 'Configure FlareSolverr & WebView Cloudflare bypass',
+                            ),
+                            onTap: () => const ServerNetworkRoute(
+                              highlight: 'flareSolverr',
+                            ).push(context),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -161,6 +192,49 @@ class BrowseSettingsScreen extends ConsumerWidget {
       leading: detailNavigationBackButton(context),
       title: title,
       child: scaffold,
+    );
+  }
+}
+
+class AutoUpdateExtensionsTile extends ConsumerWidget {
+  const AutoUpdateExtensionsTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(autoUpdateExtensionsProvider).ifNull(true);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('Auto-Update Sources & Extensions'),
+      subtitle: const Text(
+        'Automatically check and update installed extensions and refresh sources',
+      ),
+      value: enabled,
+      onChanged: (val) {
+        ref.read(autoUpdateExtensionsProvider.notifier).update(val);
+        if (val) {
+          ref.read(extensionActionsProvider).autoUpdateInstalledExtensions();
+        }
+      },
+    );
+  }
+}
+
+class NewExtensionsDisabledByDefaultTile extends ConsumerWidget {
+  const NewExtensionsDisabledByDefaultTile({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled =
+        ref.watch(newExtensionsDisabledByDefaultProvider).ifNull(true);
+    return CompactSwitchListTile(
+      controlAffinity: ListTileControlAffinity.trailing,
+      title: const Text('New Extensions Disabled by Default'),
+      subtitle: const Text(
+        'Newly installed extensions start disabled until you toggle them on',
+      ),
+      value: enabled,
+      onChanged: (val) =>
+          ref.read(newExtensionsDisabledByDefaultProvider.notifier).update(val),
     );
   }
 }

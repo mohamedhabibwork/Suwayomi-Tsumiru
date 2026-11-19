@@ -19,8 +19,10 @@ import '../../features/about/presentation/about/widget/app_update_dialog.dart';
 import '../../features/about/presentation/about/widget/update_alert_checker.dart';
 import '../../features/account/data/account_providers.dart';
 import '../../features/auth/presentation/basic_auth_deprecation.dart';
+import '../../features/browse_center/presentation/extension/controller/extension_actions.dart';
 import '../../features/offline/data/account_storage_recovery_state.dart';
 import '../../features/offline/presentation/account_storage_recovery_banner.dart';
+import '../../features/settings/presentation/appearance/appearance_screen.dart';
 import '../../graphql/__generated__/schema.graphql.dart';
 import '../../utils/extensions/custom_extensions.dart';
 import '../../utils/misc/toast/toast.dart';
@@ -139,16 +141,21 @@ class NavigationShellScreen extends HookConsumerWidget {
       Future.microtask(() {
         if (context.mounted) {
           maybeShowBasicAuthDeprecation(context: context, ref: ref);
+          ref.read(extensionActionsProvider).autoUpdateInstalledExtensions();
         }
       });
       return null;
     }, const []);
 
+    final showHistoryInBottomBar =
+        ref.watch(showHistoryInBottomBarProvider) ?? true;
+
     int getAdjustedIndex(int index) {
-      if (context.windowSizeClass >= WindowSizeClass.medium) {
+      if (context.windowSizeClass >= WindowSizeClass.medium ||
+          showHistoryInBottomBar) {
         return index;
       } else {
-        // Phone navigation omits the History branch.
+        // Phone navigation omits the History branch when showHistoryInBottomBar is false.
         if (index >= 2) {
           return index +
               1; // Browse becomes 3, Downloads becomes 4, More becomes 5
@@ -158,7 +165,8 @@ class NavigationShellScreen extends HookConsumerWidget {
     }
 
     int getReverseAdjustedIndex(int index) {
-      if (context.windowSizeClass >= WindowSizeClass.medium) {
+      if (context.windowSizeClass >= WindowSizeClass.medium ||
+          showHistoryInBottomBar) {
         return index;
       } else {
         if (index > 2) {

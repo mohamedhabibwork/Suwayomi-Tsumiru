@@ -45,9 +45,14 @@ class SmallScreenNavigationBar extends ConsumerWidget {
     final extensionUpdates =
         ref.watch(extensionUpdateBadgeCountProvider).value ?? 0;
     final hideLabels = ref.watch(hideBottomTabLabelsProvider) ?? false;
-    final navList = NavigationBarData.getNavList(context);
+    final showHistory = ref.watch(showHistoryInBottomBarProvider) ?? true;
+    final navList = NavigationBarData.getNavList(
+      context,
+      showHistoryInBottomBar: showHistory,
+    );
+    final safeIndex = selectedIndex.clamp(0, navList.length - 1);
     return NavigationBar(
-      selectedIndex: selectedIndex,
+      selectedIndex: safeIndex,
       onDestinationSelected: onDestinationSelected,
       labelBehavior: hideLabels
           ? NavigationDestinationLabelBehavior.alwaysHide
@@ -57,7 +62,7 @@ class SmallScreenNavigationBar extends ConsumerWidget {
           getNavigationDestination(
             context,
             navList[i],
-            i == selectedIndex,
+            i == safeIndex,
             downloadsPaused,
             extensionUpdates,
           ),

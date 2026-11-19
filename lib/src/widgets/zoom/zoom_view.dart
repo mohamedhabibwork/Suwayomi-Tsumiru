@@ -581,8 +581,12 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                   ? TrackPadState.waiting
                   : TrackPadState.none;
               if (details.pointerCount == 1) {
+                final nowStamp = Duration(
+                  milliseconds: DateTime.now().millisecondsSinceEpoch,
+                );
                 DragStartDetails dragDetails = DragStartDetails(
                   globalPosition: details.focalPoint,
+                  sourceTimeStamp: details.sourceTimeStamp ?? nowStamp,
                   kind: PointerDeviceKind.touch,
                 );
                 _verticalTouchHandler.handleDragStart(dragDetails);
@@ -602,8 +606,12 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                     if (_globalTrackpadDistance.longestSide > kPrecisePointerPanSlop) {
                       _trackPadState = TrackPadState.pan;
                       _dragMode = DragMode.pan;
+                      final nowStamp = Duration(
+                        milliseconds: DateTime.now().millisecondsSinceEpoch,
+                      );
                       DragStartDetails dragDetails = DragStartDetails(
                         globalPosition: details.focalPoint,
+                        sourceTimeStamp: details.sourceTimeStamp ?? nowStamp,
                         kind: PointerDeviceKind.touch,
                       );
                       _verticalTouchHandler.handleDragStart(dragDetails);
@@ -620,9 +628,11 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
               }
               switch (_dragMode) {
                 case DragMode.doubleTapDrag:
+                  final prevPos = _previousDragPosition;
+                  if (prevPos == null) return;
                   final currentDragPosition = details.localFocalPoint;
-                  final double dx = (_previousDragPosition!.dx - currentDragPosition.dx);
-                  double dy = (_previousDragPosition!.dy - currentDragPosition.dy);
+                  final double dx = (prevPos.dx - currentDragPosition.dx);
+                  double dy = (prevPos.dy - currentDragPosition.dy);
 
                   if (dx.abs() > dy.abs()) {
                     return;
@@ -673,22 +683,31 @@ class _ZoomViewState extends State<ZoomView> with SingleTickerProviderStateMixin
                 case DragMode.pan:
                   final correctedDelta = details.focalPointDelta * _scale;
                   final correctedOffset = details.focalPoint * _scale;
-                  final time = details.sourceTimeStamp!;
+                  final time =
+                      details.sourceTimeStamp ??
+                      Duration(
+                        milliseconds: DateTime.now().millisecondsSinceEpoch,
+                      );
                   _tracker.addPosition(time, correctedOffset);
-                  final DragUpdateDetails verticalDetails = DragUpdateDetails(
-                    globalPosition: correctedOffset,
-                    sourceTimeStamp: time,
-                    primaryDelta: correctedDelta.dy,
-                    delta: Offset(0.0, correctedDelta.dy),
-                  );
-                  final DragUpdateDetails horizontalDetails = DragUpdateDetails(
-                    globalPosition: correctedOffset,
-                    sourceTimeStamp: time,
-                    primaryDelta: correctedDelta.dx,
-                    delta: Offset(correctedDelta.dx, 0.0),
-                  );
-                  _verticalTouchHandler.handleDragUpdate(verticalDetails);
-                  _horizontalTouchHandler.handleDragUpdate(horizontalDetails);
+                  if (correctedDelta.dy != 0) {
+                    final DragUpdateDetails verticalDetails = DragUpdateDetails(
+                      globalPosition: correctedOffset,
+                      sourceTimeStamp: time,
+                      primaryDelta: correctedDelta.dy,
+                      delta: Offset(0.0, correctedDelta.dy),
+                    );
+                    _verticalTouchHandler.handleDragUpdate(verticalDetails);
+                  }
+                  if (correctedDelta.dx != 0) {
+                    final DragUpdateDetails horizontalDetails =
+                        DragUpdateDetails(
+                          globalPosition: correctedOffset,
+                          sourceTimeStamp: time,
+                          primaryDelta: correctedDelta.dx,
+                          delta: Offset(correctedDelta.dx, 0.0),
+                        );
+                    _horizontalTouchHandler.handleDragUpdate(horizontalDetails);
+                  }
                 case DragMode.pinchScale:
                   if (!widget.pinchEnabled) {
                     _dragMode = DragMode.none;

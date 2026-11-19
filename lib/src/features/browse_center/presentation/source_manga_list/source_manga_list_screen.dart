@@ -220,18 +220,25 @@ class SourceMangaListScreen extends HookConsumerWidget {
                 FluentIcons.more_vertical_24_regular,
               ),
               itemBuilder: (_) => [
+                if (data?.homeUrl.isNotBlank ?? false)
+                  PopupMenuItem<void>(
+                    onTap: () => openSourceHomepage(
+                      context,
+                      ref,
+                      data?.homeUrl,
+                      source: data,
+                    ),
+                    child: Text(
+                      isVideoSource
+                          ? 'Open Video Portal'
+                          : context.l10n.openHomepage,
+                    ),
+                  ),
                 PopupMenuItem<void>(
-                  onTap: () => openSourceHomepage(
-                    context,
-                    ref,
-                    data?.homeUrl,
-                    source: data,
-                  ),
-                  child: Text(
-                    isVideoSource
-                        ? 'Open Video Portal'
-                        : context.l10n.openHomepage,
-                  ),
+                  onTap: () => const ServerNetworkRoute(
+                    highlight: 'flareSolverr',
+                  ).push(context),
+                  child: Text(context.l10n.cloudflareBypass),
                 ),
               ],
             ),

@@ -124,8 +124,12 @@ class NavigationBarData {
     ),
   ];
 
-  static List<NavigationBarData> getNavList(BuildContext context) {
-    return context.windowSizeClass >= WindowSizeClass.medium
+  static List<NavigationBarData> getNavList(
+    BuildContext context, {
+    bool showHistoryInBottomBar = true,
+  }) {
+    return (context.windowSizeClass >= WindowSizeClass.medium ||
+            showHistoryInBottomBar)
         ? tabletNavList
         : phoneNavList;
   }

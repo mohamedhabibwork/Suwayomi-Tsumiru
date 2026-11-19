@@ -23,6 +23,9 @@ import '../../../../widgets/desktop/desktop_page_frame.dart';
 import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/inline_retry_row.dart';
+import '../../../browse_center/domain/content_rating.dart';
+import '../../../browse_center/domain/source/source_model.dart';
+import '../../../browse_center/presentation/source/controller/source_controller.dart';
 import '../../../library/presentation/library/controller/library_controller.dart';
 import '../../../library/presentation/library/widgets/desktop_library_panels.dart';
 import '../../../library/presentation/library/widgets/desktop_library_toolbar.dart';
@@ -30,6 +33,7 @@ import '../../../quick_open/presentation/unified_search/desktop_search_field.dar
 import '../../../quick_open/presentation/unified_search/phone_search_view.dart';
 import '../../../quick_open/presentation/unified_search/unified_search_providers.dart';
 import '../../../settings/presentation/appearance/widgets/grid_cover_width_slider/grid_cover_width_slider.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../settings/presentation/library/widgets/persistent_search_bar/persistent_search_bar.dart';
 import '../../../settings/presentation/syncyomi/syncyomi_sync.dart';
 import '../../data/updates/updates_repository.dart';
@@ -53,6 +57,46 @@ import 'widgets/updates_grid_card.dart';
 import 'widgets/updates_row_actions.dart';
 
 const _kUpdatesCardSubtitleExtent = 22.0;
+
+const List<String> _kNsfwUpdateKeywords = [
+  '18+',
+  '+18',
+  'nsfw',
+  'hentai',
+  'pornhub',
+  'xnxx',
+  'xvideos',
+  'hanime',
+  'erotica',
+  'smut',
+  'هنتاي',
+  'سكس',
+];
+
+bool isUpdateItemNsfw(
+  ChapterWithMangaDto item,
+  Map<String, SourceDto> sourcesById,
+) {
+  final manga = item.manga;
+  final source = sourcesById[manga.sourceId];
+  final warning = source?.contentWarning;
+  if (warning != null && isNsfwFromWarning(warning)) {
+    return true;
+  }
+  if (hasAdultTag(manga.genre)) {
+    return true;
+  }
+  final combinedText = [
+    manga.title,
+    item.name,
+    source?.name ?? '',
+    source?.displayName ?? '',
+  ].join(' ').toLowerCase();
+  for (final kw in _kNsfwUpdateKeywords) {
+    if (combinedText.contains(kw)) return true;
+  }
+  return isAdultManga(warning, manga.genre);
+}
 
 Widget _dateHeading(BuildContext context, String label, {bool first = false}) {
   final desktop = isOnDesktopPage(context);
@@ -100,6 +144,9 @@ class _UpdatesPagedList extends StatefulWidget {
     required this.resetList,
     required this.refetchChapter,
     required this.lastUpdatedAboveList,
+    required this.showNsfw,
+    required this.onlyNsfw,
+    required this.sourcesById,
   });
 
   final ServerPagingController<ChapterWithMangaDto> controller;
@@ -115,6 +162,9 @@ class _UpdatesPagedList extends StatefulWidget {
   final Future<ChapterDto?> Function(int chapterId) refetchChapter;
 
   final bool lastUpdatedAboveList;
+  final bool showNsfw;
+  final bool onlyNsfw;
+  final Map<String, SourceDto> sourcesById;
 
   @override
   State<_UpdatesPagedList> createState() => _UpdatesPagedListState();
@@ -123,11 +173,21 @@ class _UpdatesPagedList extends StatefulWidget {
 class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   // Cache by pages identity, not items (a fresh flattened list), to group once per page set rather than per row.
   List<List<ChapterWithMangaDto>>? _memoPages;
+  bool? _memoShowNsfw;
+  bool? _memoOnlyNsfw;
+  int? _memoSourcesCount;
   List<ChapterWithMangaDto>? _memoItems;
   List<UpdatesGroupedEntry>? _memoGroups;
   Map<int, int>? _memoHeadIndex;
   Set<int>? _memoHeaderIndices;
   Map<int, UpdatesDaySection>? _memoSections;
+
+  bool _keepItem(ChapterWithMangaDto item) {
+    if (widget.showNsfw && !widget.onlyNsfw) return true;
+    final isNsfw = isUpdateItemNsfw(item, widget.sourcesById);
+    if (!widget.showNsfw) return !isNsfw;
+    return isNsfw;
+  }
 
   ({
     List<ChapterWithMangaDto> items,
@@ -137,7 +197,11 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
     Map<int, UpdatesDaySection> sections,
   })
   _groupingFor(List<List<ChapterWithMangaDto>>? pages) {
-    if (_memoPages != null && identical(_memoPages, pages)) {
+    if (_memoPages != null &&
+        identical(_memoPages, pages) &&
+        _memoShowNsfw == widget.showNsfw &&
+        _memoOnlyNsfw == widget.onlyNsfw &&
+        _memoSourcesCount == widget.sourcesById.length) {
       return (
         items: _memoItems!,
         groups: _memoGroups!,
@@ -147,7 +211,9 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
       );
     }
     final items = [
-      for (final page in pages ?? <List<ChapterWithMangaDto>>[]) ...page,
+      for (final page in pages ?? <List<ChapterWithMangaDto>>[])
+        for (final item in page)
+          if (_keepItem(item)) item,
     ];
     final groups = groupUpdatesForDisplay(items);
     final headIndex = headFlatIndexToDisplayIndex(items, groups);
@@ -157,6 +223,9 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
         section.headerFlatIndex: section,
     };
     _memoPages = pages;
+    _memoShowNsfw = widget.showNsfw;
+    _memoOnlyNsfw = widget.onlyNsfw;
+    _memoSourcesCount = widget.sourcesById.length;
     _memoItems = items;
     _memoGroups = groups;
     _memoHeadIndex = headIndex;
@@ -237,6 +306,9 @@ class _UpdatesPagedListState extends State<_UpdatesPagedList> {
   ) {
     final grouping = _groupingFor(state.pages);
     final items = grouping.items;
+    if (flatIndex < 0 || flatIndex >= items.length) {
+      return const SizedBox.shrink();
+    }
 
     final isGrouped = widget.groupingMode != UpdatesGroupingMode.disabled;
 
@@ -571,8 +643,11 @@ class UpdatesScreen extends HookConsumerWidget {
   Future<ServerPage<ChapterWithMangaDto>> _fetchPage(
     UpdatesRepository repository,
     int pageKey,
-    UpdatesFilter filter,
-  ) async {
+    UpdatesFilter filter, {
+    required bool showNsfw,
+    required bool onlyNsfw,
+    required Map<String, SourceDto> sourcesById,
+  }) async {
     final page = await repository.getRecentChaptersPage(
       pageNo: pageKey,
       filter: filter,
@@ -580,7 +655,13 @@ class UpdatesScreen extends HookConsumerWidget {
     if (page == null) {
       return (items: <ChapterWithMangaDto>[], hasNextPage: false);
     }
-    return (items: page.nodes, hasNextPage: page.hasNextPage);
+    final filteredNodes = (showNsfw && !onlyNsfw)
+        ? page.nodes
+        : page.nodes.where((item) {
+            final isNsfw = isUpdateItemNsfw(item, sourcesById);
+            return !showNsfw ? !isNsfw : isNsfw;
+          }).toList();
+    return (items: filteredNodes, hasNextPage: page.hasNextPage);
   }
 
   @override
@@ -592,7 +673,12 @@ class UpdatesScreen extends HookConsumerWidget {
     final selectedChapters = useState<Map<int, ChapterDto>>({});
     final selectionAnchor = useState<int?>(null);
     final filter = ref.watch(updatesFilterProvider);
-    final hasActiveFilters = ref.watch(updatesHasActiveFiltersProvider);
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final sourcesList = ref.watch(sourceListProvider).value ?? const <SourceDto>[];
+    final sourcesById = {for (final s in sourcesList) s.id: s};
+    final hasActiveFilters =
+        ref.watch(updatesHasActiveFiltersProvider) || onlyNsfw;
     final groupingMode =
         ref.watch(updatesGroupingModeProvider) ?? UpdatesGroupingMode.collapsed;
     final displayMode =
@@ -613,6 +699,12 @@ class UpdatesScreen extends HookConsumerWidget {
     // The fetcher is captured once; read current filters through a holder to avoid stale closures.
     final latestFilter = useRef(filter);
     latestFilter.value = filter;
+    final latestShowNsfw = useRef(showNsfw);
+    latestShowNsfw.value = showNsfw;
+    final latestOnlyNsfw = useRef(onlyNsfw);
+    latestOnlyNsfw.value = onlyNsfw;
+    final latestSourcesById = useRef(sourcesById);
+    latestSourcesById.value = sourcesById;
     final controller = useServerPagingController<ChapterWithMangaDto>(
       firstPageKey: 0,
       // Read the repository per request because endpoint switches dispose the captured client.
@@ -620,6 +712,9 @@ class UpdatesScreen extends HookConsumerWidget {
         ref.read(updatesRepositoryProvider),
         pageKey,
         latestFilter.value,
+        showNsfw: latestShowNsfw.value,
+        onlyNsfw: latestOnlyNsfw.value,
+        sourcesById: latestSourcesById.value,
       ),
     );
     // List resets invalidate replies from earlier generations.
@@ -662,7 +757,13 @@ class UpdatesScreen extends HookConsumerWidget {
         final page = snapshot.asData?.value;
         if (page == null) return;
         final result = extractNewUpdatesFromPage(page.nodes, existingIds);
-        newItems.addAll(result.items);
+        final filteredNew = (latestShowNsfw.value && !latestOnlyNsfw.value)
+            ? result.items
+            : result.items.where((item) {
+                final isNsfw = isUpdateItemNsfw(item, latestSourcesById.value);
+                return !latestShowNsfw.value ? !isNsfw : isNsfw;
+              }).toList();
+        newItems.addAll(filteredNew);
         if (result.boundaryFound) break;
         if (!page.hasNextPage) break;
         if (pageNo == maxPages - 1) {
@@ -699,7 +800,7 @@ class UpdatesScreen extends HookConsumerWidget {
       }
       resetList();
       return null;
-    }, [filter]);
+    }, [filter, showNsfw, onlyNsfw]);
     final selecting = selectedChapters.value.isNotEmpty;
     final desktop = context.usesDesktopShell;
     final topBar = showsMergedTopBar(context);
@@ -996,6 +1097,9 @@ class UpdatesScreen extends HookConsumerWidget {
                     resetList: resetList,
                     refetchChapter: (id) => refetchChapter(ref, id),
                     lastUpdatedAboveList: showLastUpdated,
+                    showNsfw: showNsfw,
+                    onlyNsfw: onlyNsfw,
+                    sourcesById: sourcesById,
                   ),
                 ],
               ),

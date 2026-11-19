@@ -184,7 +184,13 @@ class ChapterMangaListTile extends HookConsumerWidget {
                           ),
                           const Gap(4),
                           Text(
-                            chapterWithMangaDto.name,
+                            [
+                              chapterWithMangaDto.name,
+                              if (chapterWithMangaDto.sourceOrder > 0)
+                                context.l10n.noOfChapters(
+                                  chapterWithMangaDto.sourceOrder,
+                                ),
+                            ].join(' • '),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(

@@ -9,11 +9,13 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../../../../constants/enum.dart';
 import '../../../../../routes/navigation.dart';
 import '../../../../../routes/router_config.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../../utils/motion/reduce_motion.dart';
+import '../../../../browse_center/presentation/global_search/controller/source_quick_search_controller.dart';
 import '../../../../library/presentation/library/controller/library_controller.dart';
 import 'chapter_context_menu.dart';
 
@@ -39,17 +41,17 @@ Future<void> showTagActionsMenu(
     position: position,
     items: [
       PopupMenuItem(
+        value: 'global',
+        child: ChapterMenuRow(
+          icon: FluentIcons.globe_search_24_regular,
+          label: 'Search Tag in All Sources',
+        ),
+      ),
+      PopupMenuItem(
         value: 'search',
         child: ChapterMenuRow(
           icon: FluentIcons.search_24_regular,
           label: context.l10n.search,
-        ),
-      ),
-      PopupMenuItem(
-        value: 'global',
-        child: ChapterMenuRow(
-          icon: FluentIcons.globe_search_24_regular,
-          label: context.l10n.globalSearch,
         ),
       ),
       PopupMenuItem(
@@ -69,6 +71,9 @@ Future<void> showTagActionsMenu(
       ref.read(libraryQueryProvider.notifier).update(tag);
       const LibraryRoute(categoryId: 0).go(context);
     case 'global':
+      ref
+          .read(globalSearchScopeProvider.notifier)
+          .update(GlobalSearchSourceFilter.all);
       openGlobalSearch(context, query: tag);
     case 'copy':
       Clipboard.setData(ClipboardData(text: tag));

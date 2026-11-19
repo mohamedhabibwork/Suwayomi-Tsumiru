@@ -31,25 +31,46 @@ class SourceScreen extends HookConsumerWidget {
     final sourceMapData = ref.watch(sourceMapFilteredAndQueriedProvider);
     final query = ref.watch(sourceSearchQueryProvider);
     final activeCategory = ref.watch(selectedResourceCategoryProvider);
+    final activeSort = ref.watch(selectedExtensionSortProvider);
 
-    List<SourceDto>? filterCategory(List<SourceDto>? list) => list
-        ?.where((s) => matchesSourceCategory(s, activeCategory))
-        .toList();
+    List<SourceDto>? filterAndSortCategory(List<SourceDto>? list) {
+      if (list == null) return null;
+      final filtered = list
+          .where((s) => matchesSourceCategory(s, activeCategory))
+          .toList();
+      filtered.sort((a, b) {
+        switch (activeSort) {
+          case ExtensionSortOption.nameAsc:
+          case ExtensionSortOption.enabledFirst:
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case ExtensionSortOption.nameDesc:
+            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+          case ExtensionSortOption.language:
+            final la = normalizeSourceLang(a);
+            final lb = normalizeSourceLang(b);
+            final cmp = la.compareTo(lb);
+            return cmp != 0
+                ? cmp
+                : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+        }
+      });
+      return filtered;
+    }
 
     final allPinned = ref.watch(pinnedSourcesProvider);
-    final pinned = (query.isBlank
-            ? allPinned
-            : allPinned.where((s) => s.name.query(query)).toList())
-        .where((s) => matchesSourceCategory(s, activeCategory))
-        .toList();
+    final pinned = filterAndSortCategory(
+      query.isBlank
+          ? allPinned
+          : allPinned.where((s) => s.name.query(query)).toList(),
+    ) ?? const <SourceDto>[];
 
     final rawMap = {...?sourceMapData.value};
-    final localSource = filterCategory(rawMap.remove("localsourcelang"));
-    final lastUsed = filterCategory(rawMap.remove("lastUsed"));
-    final allSource = filterCategory(rawMap.remove("all"));
+    final localSource = filterAndSortCategory(rawMap.remove("localsourcelang"));
+    final lastUsed = filterAndSortCategory(rawMap.remove("lastUsed"));
+    final allSource = filterAndSortCategory(rawMap.remove("all"));
     final sourceMap = <String, List<SourceDto>>{
       for (final entry in rawMap.entries)
-        entry.key: filterCategory(entry.value) ?? const <SourceDto>[],
+        entry.key: filterAndSortCategory(entry.value) ?? const <SourceDto>[],
     };
 
     refresh() => ref.refresh(sourceListProvider.future);

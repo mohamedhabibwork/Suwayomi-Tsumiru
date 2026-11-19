@@ -58,13 +58,15 @@ class ExtensionInfoScreen extends HookConsumerWidget {
             ListTile(
               title: Text(context.l10n.extensionStore),
               subtitle: Text(
-                extension.extensionStore?.name ?? extension.storeIndexUrl!,
+                extension.extensionStore?.name ??
+                    extension.storeIndexUrl ??
+                    '',
               ),
             ),
           if (extension.extensionLib.isNotBlank)
             ListTile(
               title: Text(context.l10n.extensionLibrary),
-              trailing: Text(extension.extensionLib!),
+              trailing: Text(extension.extensionLib ?? ''),
             ),
           if (extension.isInstalled.ifNull())
             Builder(

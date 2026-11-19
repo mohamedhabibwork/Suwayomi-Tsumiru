@@ -19,10 +19,43 @@ import '../../../../widgets/desktop/desktop_top_bar.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
 import '../../../../widgets/shell/detail_navigation_shell_screen.dart';
+import '../../../library/presentation/library/controller/library_manga_list.dart';
 import '../../../manga_book/domain/manga/manga_model.dart';
+import '../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../source/controller/source_controller.dart';
 import 'controller/source_quick_search_controller.dart';
 import 'widgets/source_short_search.dart';
+
+const List<String> _kDefaultQuickSearchTags = [
+  'Action',
+  'Romance',
+  'Fantasy',
+  'Isekai',
+  'Adventure',
+  'Manhwa',
+  'Webtoon',
+  'Comedy',
+  'Drama',
+  'Martial Arts',
+  'Sci-Fi',
+  'Supernatural',
+  'Horror',
+  'Mystery',
+  'Slice of Life',
+  'School Life',
+  'Historical',
+  'Sports',
+];
+
+const List<String> _kNsfwQuickSearchTags = [
+  'Adult',
+  'Mature',
+  'Smut',
+  'Ecchi',
+  'Erotica',
+  'Hentai',
+  '18+',
+];
 
 String _normalizedTitle(String value) =>
     value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
@@ -155,6 +188,19 @@ class GlobalSearchScreen extends HookConsumerWidget {
       hasPinned: hasPinned,
       onInteract: cancelAutoOpen,
     );
+    void selectTag(String tag) {
+      cancelAutoOpen();
+      ref
+          .read(globalSearchScopeProvider.notifier)
+          .update(GlobalSearchSourceFilter.all);
+      queryController.text = tag;
+      query.value = tag;
+    }
+
+    final tagBar = _QuickTagSearchBar(
+      selectedTag: query.value,
+      onSelectTag: selectTag,
+    );
     // The shell slot mounts a frame later; restore focus only if the old field held it.
     final topBar = showsMergedTopBar(context);
     final restoreFocus = topBar && !wasTopBar.value && hadFocus.value;
@@ -239,6 +285,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                                 searchField: searchField,
                               ),
                             ),
+                      tagBar,
                       results,
                     ],
                   ),
@@ -253,6 +300,7 @@ class GlobalSearchScreen extends HookConsumerWidget {
                       ),
                       child: chips,
                     ),
+                    tagBar,
                     results,
                   ],
                 ),
@@ -356,6 +404,90 @@ class _SearchFilterChips extends ConsumerWidget {
           },
         ),
       ],
+    );
+  }
+}
+
+class _QuickTagSearchBar extends ConsumerWidget {
+  const _QuickTagSearchBar({
+    required this.selectedTag,
+    required this.onSelectTag,
+  });
+
+  final String? selectedTag;
+  final ValueChanged<String> onSelectTag;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final libraryMangas =
+        ref.watch(libraryMangaListProvider).value ?? const <MangaDto>[];
+    final libraryTags = <String>[
+      for (final m in libraryMangas) ...m.genre,
+    ];
+    final seen = <String>{};
+    final tags = <String>[];
+
+    void addTag(String raw) {
+      final clean = raw.trim();
+      if (clean.isEmpty) return;
+      final lower = clean.toLowerCase();
+      if (seen.add(lower)) tags.add(clean);
+    }
+
+    if (onlyNsfw) {
+      for (final t in _kNsfwQuickSearchTags) {
+        addTag(t);
+      }
+    } else {
+      if (showNsfw) {
+        for (final t in _kNsfwQuickSearchTags) {
+          addTag(t);
+        }
+      }
+      for (final t in libraryTags.take(12)) {
+        addTag(t);
+      }
+      for (final t in _kDefaultQuickSearchTags) {
+        addTag(t);
+      }
+    }
+
+    final currentNormalized = selectedTag?.trim().toLowerCase() ?? '';
+
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        itemCount: tags.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
+        itemBuilder: (context, index) {
+          final tag = tags[index];
+          final isSelected = tag.toLowerCase() == currentNormalized;
+          return ActionChip(
+            visualDensity: VisualDensity.compact,
+            avatar: Icon(
+              FluentIcons.tag_24_regular,
+              size: 15,
+              color: isSelected
+                  ? context.colorScheme.primary
+                  : context.colorScheme.onSurfaceVariant,
+            ),
+            backgroundColor: isSelected
+                ? context.colorScheme.primaryContainer
+                : null,
+            label: Text(
+              tag,
+              style: TextStyle(
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+            onPressed: () => onSelectTag(tag),
+          );
+        },
+      ),
     );
   }
 }

@@ -13,6 +13,7 @@ import '../../../../../utils/mixin/state_provider_mixin.dart';
 import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/source_repository/source_repository.dart';
 import '../../../domain/content_rating.dart';
+import '../../../domain/extension/top_extensions.dart';
 import '../../../domain/source/source_model.dart';
 import '../../extension/controller/extension_controller.dart';
 
@@ -20,6 +21,8 @@ part 'source_controller.g.dart';
 
 String normalizeSourceLang(SourceDto s) {
   final raw = (s.language?.code ?? s.lang).trim().toLowerCase();
+  if (raw.startsWith('en-') || raw.startsWith('en_')) return 'en';
+  if (raw.startsWith('ar-') || raw.startsWith('ar_')) return 'ar';
   return raw.isEmpty ? 'other' : raw;
 }
 
@@ -28,20 +31,30 @@ Future<List<SourceDto>?> sourceList(Ref ref) =>
     ref.watch(sourceRepositoryProvider).getSourceList();
 
 /// Applies the NSFW source filter; defaults to false unless enabled via Face ID.
-/// When [onlyNsfwModeProvider] is active, shows ONLY +18 sources.
+/// Also enforces English & Arabic content languages only (`en`, `ar`, `all`, `localsourcelang`)
+/// and excludes all video extensions/sources.
 @riverpod
 AsyncValue<List<SourceDto>?> visibleSourceList(Ref ref) {
   final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
   final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   return ref.watch(sourceListProvider).copyWithData((list) {
     if (list == null) return null;
+    final langAndTypeFiltered = [
+      for (final e in list)
+        if (!isVideoSource(e) && isAllowedContentLanguage(normalizeSourceLang(e)))
+          e,
+    ];
     if (!showNsfw) {
-      return [...list.where((e) => !isNsfwFromWarning(e.contentWarning))];
+      return [
+        ...langAndTypeFiltered.where((e) => !isNsfwFromWarning(e.contentWarning)),
+      ];
     }
     if (onlyNsfw) {
-      return [...list.where((e) => isNsfwFromWarning(e.contentWarning))];
+      return [
+        ...langAndTypeFiltered.where((e) => isNsfwFromWarning(e.contentWarning)),
+      ];
     }
-    return list;
+    return langAndTypeFiltered;
   });
 }
 
@@ -206,13 +219,16 @@ AsyncValue<Map<String, List<SourceDto>>?> sourceMapFiltered(Ref ref) {
   final sourceMapData = ref.watch(sourceMapProvider);
   final sourceMap = {...?sourceMapData.value};
   final rawEnabled = ref.watch(sourceLanguageFilterProvider) ??
-      const <String>['all', 'lastUsed', 'en', 'localsourcelang'];
+      const <String>['all', 'lastUsed', 'en', 'ar', 'localsourcelang'];
   final enabledSet = {
     for (final c in rawEnabled) c.trim().toLowerCase(),
   };
   final enabledContentLangs = {
     for (final c in enabledSet)
-      if (c != 'lastused' && c != 'localsourcelang') c,
+      if (c != 'lastused' &&
+          c != 'localsourcelang' &&
+          isAllowedContentLanguage(c))
+        c,
   };
 
   for (final entry in sourceMap.entries) {

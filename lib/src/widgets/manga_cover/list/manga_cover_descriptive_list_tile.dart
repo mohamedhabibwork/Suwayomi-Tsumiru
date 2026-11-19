@@ -199,6 +199,17 @@ class _MangaCoverDescriptiveListTileState
                                 style: context.textTheme.bodySmall,
                               ),
                             ],
+                            if (widget.manga.chapters.totalCount > 0) ...[
+                              const Text(" • "),
+                              Text(
+                                context.l10n.noOfChapters(
+                                  widget.manga.chapters.totalCount,
+                                ),
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                             if (widget.manga.source?.displayName != null) ...[
                               Text(" • "),
                               WebRouteLink(

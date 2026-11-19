@@ -209,6 +209,21 @@ class SeriesHeader extends ConsumerWidget {
                                       ).toLocale(context),
                                       style: context.textTheme.bodySmall,
                                     ),
+                                    if (manga.chapters.totalCount > 0) ...[
+                                      const Text(' • '),
+                                      Text(
+                                        context.l10n.noOfChapters(
+                                          manga.chapters.totalCount,
+                                        ),
+                                        style: context.textTheme.bodySmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: context
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                      ),
+                                    ],
                                     if (manga.source?.displayName != null) ...[
                                       const Text(' • '),
                                       InkWell(

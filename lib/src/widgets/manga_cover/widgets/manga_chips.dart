@@ -38,6 +38,12 @@ class MangaChipsRow extends ConsumerWidget {
               color: context.theme.colorScheme.primary,
               textColor: context.theme.colorScheme.onPrimary,
             ),
+          if (manga.chapters.totalCount > 0)
+            MangaChip(
+              text: context.l10n.noOfChapters(manga.chapters.totalCount),
+              color: context.theme.colorScheme.secondaryContainer,
+              textColor: context.theme.colorScheme.onSecondaryContainer,
+            ),
           if (showCountBadges) ...[
             Row(
               mainAxisSize: MainAxisSize.min,

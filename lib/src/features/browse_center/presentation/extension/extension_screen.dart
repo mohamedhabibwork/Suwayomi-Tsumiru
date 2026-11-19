@@ -4,21 +4,17 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-import 'package:fluentui_system_icons/fluentui_system_icons.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../constants/app_sizes.dart';
 import '../../../../constants/language_list.dart';
-import '../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../utils/extensions/custom_extensions.dart';
 import '../../../../utils/misc/app_utils.dart';
 import '../../../../utils/misc/toast/toast.dart';
 import '../../../../widgets/emoticons.dart';
 import '../../../../widgets/search_field.dart';
-import '../../../account/data/account_providers.dart';
-import '../../data/extension_store_repository/extension_store_repository.dart';
 import '../../domain/extension/extension_model.dart';
 import '../../domain/extension/top_extensions.dart';
 import '../browse/browse_no_search_results.dart';
@@ -151,41 +147,6 @@ class ExtensionScreen extends HookConsumerWidget {
 
     final query = ref.watch(extensionQueryProvider);
     final desktop = context.usesDesktopShell;
-    final canManageStores = ref
-        .watch(settledAccountAccessProvider)
-        .allows(Enum$UserPermission.MANAGE_EXTENSION_STORES);
-    final storeList = ref.watch(extensionStoreListProvider);
-    final existingStoreUrls = {
-      ...?storeList.value?.stores.map((s) => s.indexUrl),
-    };
-    final hasDefaultStores = kCuratedExtensionStores
-        .where((s) => s.isDefault && !s.isNsfw)
-        .every((s) => isExtensionStoreUrlPresent(s.indexUrl, existingStoreUrls));
-    final addingStores = useState(false);
-
-    Future<void> quickAddDefaultStores() async {
-      if (addingStores.value) return;
-      addingStores.value = true;
-      await AppUtils.guard(() async {
-        for (final preset in kCuratedExtensionStores.where(
-          (s) => s.isDefault && !s.isNsfw,
-        )) {
-          if (isExtensionStoreUrlPresent(preset.indexUrl, existingStoreUrls)) {
-            continue;
-          }
-          try {
-            await ref
-                .read(extensionStoreRepositoryProvider)
-                .addStore(preset.indexUrl);
-          } catch (_) {}
-        }
-        if (!context.mounted) return;
-        // ignore: unused_result
-        ref.refresh(extensionStoreListProvider.future);
-        await refresh();
-      }, ref.read(toastProvider));
-      if (context.mounted) addingStores.value = false;
-    }
 
     final body = extensionMapData.showUiWhenData(
       context,
@@ -233,57 +194,15 @@ class ExtensionScreen extends HookConsumerWidget {
           if (query.isNotBlank) return const BrowseNoSearchResults();
           return Emoticons(
             title: context.l10n.extensionListEmpty,
-            button: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (canManageStores && !hasDefaultStores)
-                  FilledButton.icon(
-                    onPressed:
-                        addingStores.value ? null : quickAddDefaultStores,
-                    icon: const Icon(FluentIcons.star_24_regular),
-                    label: Text(
-                      addingStores.value
-                          ? context.l10n.processing
-                          : 'Add All Default Stores (Manga, Novels, Aidoku & Mangayomi)',
-                    ),
-                  ),
-                TextButton(
-                  onPressed: refresh,
-                  child: Text(context.l10n.refresh),
-                ),
-              ],
+            button: TextButton(
+              onPressed: refresh,
+              child: Text(context.l10n.refresh),
             ),
           );
         }
 
         final scrollView = CustomScrollView(
           slivers: [
-            if (query.isBlank && canManageStores && !hasDefaultStores)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  child: Card(
-                    child: ListTile(
-                      leading: const Icon(FluentIcons.star_24_regular),
-                      title: const Text(
-                        'Add All Default Stores (Manga, Novels, Aidoku & Mangayomi)',
-                      ),
-                      subtitle: const Text(
-                        'Keiyoushi, LNReader Novels, Aidoku & Mangayomi (English & Arabic)',
-                      ),
-                      trailing: FilledButton(
-                        onPressed:
-                            addingStores.value ? null : quickAddDefaultStores,
-                        child: Text(
-                          addingStores.value
-                              ? context.l10n.processing
-                              : context.l10n.add,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
             if (update.isNotBlank)
               ...extensionSet(
                 key: const ValueKey("update"),

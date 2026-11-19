@@ -6,6 +6,9 @@ import '../../../../../utils/misc/toast/toast.dart';
 import '../../../../account/data/account_providers.dart';
 import '../../../../account/domain/account_access.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
+import '../../../../browse_center/domain/content_rating.dart';
+import '../../../../browse_center/presentation/source/controller/source_controller.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/downloads/downloads_repository.dart';
 import '../../../domain/downloads/downloads_model.dart';
 import '../../../domain/downloads/graphql/__generated__/fragment.graphql.dart';
@@ -223,7 +226,24 @@ DownloadDto? downloadsFromId(Ref ref, int chapterId) =>
 
 @riverpod
 List<int> downloadsChapterIds(Ref ref) {
-  final downloads = ref.watch(downloadsMapProvider).values.toList();
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+  final sourcesById = {
+    for (final list in (ref.watch(sourceMapProvider).value ?? {}).values)
+      for (final s in list) s.id: s,
+  };
+  final downloads = ref.watch(downloadsMapProvider).values.where((d) {
+    final source = sourcesById[d.manga.source?.id];
+    final isNsfw =
+        (source?.contentWarning != null &&
+            isNsfwFromWarning(source!.contentWarning)) ||
+        hasAdultKeywordText(d.manga.title) ||
+        hasAdultKeywordText(d.chapter.name) ||
+        hasAdultKeywordText(source?.displayName ?? source?.name);
+    if (!showNsfw && isNsfw) return false;
+    if (onlyNsfw && !isNsfw) return false;
+    return true;
+  }).toList();
   downloads.sort((a, b) => a.position.compareTo(b.position));
   return downloads.map((d) => d.chapter.id).toList();
 }

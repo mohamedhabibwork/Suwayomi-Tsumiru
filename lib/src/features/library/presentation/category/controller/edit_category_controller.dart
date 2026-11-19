@@ -13,6 +13,8 @@ import '../../../../../features/offline/data/offline_repository.dart';
 import '../../../../../features/offline/data/server_reachability.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/network/graphql_errors.dart';
+import '../../../../browse_center/domain/content_rating.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/category_repository.dart';
 import '../../../data/default_category.dart';
 import '../../../domain/category/category_model.dart';
@@ -202,15 +204,23 @@ AsyncValue<List<CategoryDto>?> nonZeroCategoryList(Ref ref) {
   );
 }
 
+bool isAdultCategoryName(String name) =>
+    hasAdultTag([name]) || hasAdultKeywordText(name);
+
 /// Non-empty library tabs, including hidden categories only when showHiddenCategories is enabled.
 /// The edit screen uses the full category list so hidden categories can still be restored.
 @riverpod
 AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
   final categoryList = ref.watch(nonZeroCategoryListProvider);
   final showHidden = ref.watch(showHiddenCategoriesProvider).ifNull(false);
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
   return categoryList.copyWithData(
     (_) => categoryList.value
-        ?.where((element) => showHidden || !element.isHidden)
+        ?.where(
+          (element) =>
+              (showHidden || !element.isHidden) &&
+              (showNsfw || !isAdultCategoryName(element.name)),
+        )
         .toList(),
   );
 }
@@ -219,12 +229,15 @@ AsyncValue<List<CategoryDto>?> visibleCategoryList(Ref ref) {
 @riverpod
 AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
   final base = ref.watch(visibleCategoryListProvider);
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   if (ref.watch(showEmptyCategoriesSearchProvider).ifNull(false)) return base;
   final searching =
       (ref.watch(libraryQueryDebouncedProvider)?.trim()).isNotBlank;
-  if (!searching &&
-      (ref.watch(useCategoryLibraryOptionsProvider) ||
-          ref.watch(libraryFilterActiveCountProvider) == 0)) {
+  final filtering =
+      !ref.watch(useCategoryLibraryOptionsProvider) &&
+      ref.watch(libraryFilterActiveCountProvider) > 0;
+  if (!searching && !filtering && showNsfw && !onlyNsfw) {
     return base;
   }
   final activeId = !searching
@@ -237,6 +250,9 @@ AsyncValue<List<CategoryDto>?> libraryShownCategoryList(Ref ref) {
     final shown = list!
         .where((category) {
           if (activeId != null && category.id == activeId) return true;
+          if (!searching && !filtering && category.mangas.totalCount == 0) {
+            return true;
+          }
           final filtered = ref
               .watch(
                 categoryMangaListWithQueryAndFilterProvider(

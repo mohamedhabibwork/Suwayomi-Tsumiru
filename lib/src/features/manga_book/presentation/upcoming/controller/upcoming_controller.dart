@@ -13,6 +13,9 @@ import '../../../../../global_providers/global_providers.dart';
 import '../../../../../graphql/__generated__/schema.graphql.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../utils/mixin/shared_preferences_client_mixin.dart';
+import '../../../../browse_center/domain/content_rating.dart';
+import '../../../../browse_center/presentation/source/controller/source_controller.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/upcoming/graphql/__generated__/query.graphql.dart';
 import '../../../data/updates/updates_repository.dart';
 import '../../../domain/manga/manga_model.dart';
@@ -82,6 +85,8 @@ UpcomingData buildUpcomingData(
 
 @riverpod
 Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   final nodes = await ref
       .watch(graphQlClientProvider)
       .query$GetLibraryMangas(
@@ -93,7 +98,19 @@ Future<List<MangaDto>> upcomingLibraryMangas(Ref ref) async {
         ),
       )
       .getData((data) => data.mangas.nodes);
-  return [for (final n in nodes ?? const []) n as MangaDto];
+  final all = [for (final n in nodes ?? const []) n as MangaDto];
+  return all.where((m) {
+    final isNsfw = isAdultManga(
+      m.source?.contentWarning,
+      m.genre,
+      userTags: m.metaData.userTags,
+      title: m.title,
+      sourceName: m.source?.displayName ?? m.source?.name,
+    );
+    if (!showNsfw && isNsfw) return false;
+    if (onlyNsfw && !isNsfw) return false;
+    return true;
+  }).toList();
 }
 
 /// Predicts non-completed library series in bounded batches to limit concurrent chapter requests.
@@ -152,16 +169,35 @@ Future<Map<DateTime, List<CalendarSeries>>> upcomingPastReleases(
   required DateTime start,
   required DateTime end,
 }) async {
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+  final sourcesById = {
+    for (final list in (ref.watch(sourceMapProvider).value ?? {}).values)
+      for (final s in list) s.id: s,
+  };
   final chapters = await ref
       .watch(updatesRepositoryProvider)
       .getChaptersInRange(start: start, end: end);
   final byDay = <DateTime, Map<int, CalendarSeries>>{};
   for (final chapter in chapters) {
+    final manga = chapter.manga;
+    final source = sourcesById[manga.sourceId];
+    final isNsfw =
+        (source?.contentWarning != null &&
+            isNsfwFromWarning(source!.contentWarning)) ||
+        isAdultManga(
+          source?.contentWarning,
+          manga.genre,
+          title: manga.title,
+          sourceName: source?.displayName ?? source?.name,
+        ) ||
+        hasAdultKeywordText(chapter.name);
+    if (!showNsfw && isNsfw) continue;
+    if (onlyNsfw && !isNsfw) continue;
     final seconds = int.tryParse(chapter.fetchedAt);
     if (seconds == null) continue;
     final fetched = DateTime.fromMillisecondsSinceEpoch(seconds * 1000);
     final day = DateTime(fetched.year, fetched.month, fetched.day);
-    final manga = chapter.manga;
     (byDay[day] ??= {})[manga.id] = (
       id: manga.id,
       title: manga.title,

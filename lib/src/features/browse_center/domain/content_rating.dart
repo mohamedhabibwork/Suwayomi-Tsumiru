@@ -23,17 +23,60 @@ const _adultTags = {
   'erotica',
   'pornographic',
   '18+',
+  '+18',
+  'ecchi',
+  'هنتاي',
+  'سكس',
+  'للكبار',
+  'إيتشي',
 };
+
+const _adultTextKeywords = [
+  '18+',
+  '+18',
+  'nsfw',
+  'hentai',
+  'pornhub',
+  'xnxx',
+  'xvideos',
+  'hanime',
+  'erotica',
+  'pornographic',
+  'هنتاي',
+  'سكس',
+  'للكبار',
+];
 
 bool hasAdultTag(Iterable<String> genre) =>
     genre.any((tag) => _adultTags.contains(tag.trim().toLowerCase()));
 
-/// MIXED or unknown sources use series tags; untagged series are treated as safe.
-bool isAdultManga(Enum$ContentWarning? warning, Iterable<String> genre) =>
-    switch (warning) {
-      Enum$ContentWarning.SAFE => false,
-      Enum$ContentWarning.MIXED => hasAdultTag(genre),
-      Enum$ContentWarning.NSFW => true,
-      null => hasAdultTag(genre),
-      _ => true,
-    };
+bool hasAdultKeywordText(String? text) {
+  if (text == null || text.isEmpty) return false;
+  final lower = text.toLowerCase();
+  for (final kw in _adultTextKeywords) {
+    if (lower.contains(kw)) return true;
+  }
+  return false;
+}
+
+/// Checks genre tags, optional user tags, title/source keywords, and source content warning.
+bool isAdultManga(
+  Enum$ContentWarning? warning,
+  Iterable<String> genre, {
+  Iterable<String>? userTags,
+  String? title,
+  String? sourceName,
+}) {
+  if (hasAdultTag(genre)) return true;
+  if (userTags != null && hasAdultTag(userTags)) return true;
+  if (hasAdultKeywordText(title) || hasAdultKeywordText(sourceName)) {
+    return true;
+  }
+  return switch (warning) {
+    Enum$ContentWarning.SAFE => false,
+    Enum$ContentWarning.MIXED => false,
+    Enum$ContentWarning.NSFW => true,
+    null => false,
+    _ => true,
+  };
+}

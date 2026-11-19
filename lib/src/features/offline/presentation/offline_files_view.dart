@@ -20,8 +20,10 @@ import '../../../widgets/emoticons.dart';
 import '../../../widgets/selection_action_bar.dart';
 import '../../../widgets/server_image.dart';
 import '../../account/data/account_providers.dart';
+import '../../browse_center/domain/content_rating.dart';
 import '../../manga_book/presentation/manga_details/widgets/chapter_context_menu.dart';
 import '../../manga_book/presentation/manga_details/widgets/edit_manga_category_dialog.dart';
+import '../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../data/account_storage_recovery_state.dart';
 import '../data/offline_database.dart';
 import '../data/offline_download_providers.dart';
@@ -86,10 +88,35 @@ class OfflineFilesView extends HookConsumerWidget {
     if (!ref.watch(offlineEnabledProvider)) {
       return Center(child: Text(context.l10n.offlineNotAvailable));
     }
-    final allSeries =
+    final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+    final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
+    final rawAllSeries =
         ref.watch(offlineSeriesProvider).value ?? const <OfflineSeriesEntry>[];
+    final allSeries = rawAllSeries.where((s) {
+      final warning = s.manga.sourceContentWarning == null
+          ? null
+          : fromJson$Enum$ContentWarning(s.manga.sourceContentWarning!);
+      final isNsfw =
+          (warning != null && isNsfwFromWarning(warning)) ||
+          isAdultManga(
+            warning,
+            offlineGenre(s.manga.genre),
+            title: s.manga.title,
+            sourceName: s.manga.sourceName,
+          );
+      if (!showNsfw && isNsfw) return false;
+      if (onlyNsfw && !isNsfw) return false;
+      return true;
+    }).toList();
     final offlineCategories =
-        ref.watch(_offlineCategoriesProvider).value ?? const <OfflineCategory>[];
+        (ref.watch(_offlineCategoriesProvider).value ??
+                const <OfflineCategory>[])
+            .where(
+              (c) =>
+                  showNsfw ||
+                  (!hasAdultTag([c.name]) && !hasAdultKeywordText(c.name)),
+            )
+            .toList();
     final mangaCategories =
         ref.watch(_offlineMangaCategoryMapProvider).value ??
         const <int, List<OfflineCategory>>{};

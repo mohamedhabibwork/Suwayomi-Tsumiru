@@ -87,6 +87,17 @@ List<MangaDto> applyLibraryFilterSort(
 
   bool filter(MangaDto manga) {
     if (mangaIds != null && !mangaIds.contains(manga.id)) return false;
+    if (mangaFilterLewd != null &&
+        (mangaFilterLewd ^
+            isAdultManga(
+              manga.source?.contentWarning,
+              manga.genre,
+              userTags: manga.metaData.userTags,
+              title: manga.title,
+              sourceName: manga.source?.displayName ?? manga.source?.name,
+            ))) {
+      return false;
+    }
     if (ignoreFilters && !searchQuery.isEmpty) {
       return searchQuery.matches(
         manga.filterFields(trackerNames),
@@ -130,11 +141,6 @@ List<MangaDto> applyLibraryFilterSort(
     }
     if (mangaFilterOffline != null &&
         (mangaFilterOffline ^ offlineMangaIds.contains(manga.id))) {
-      return false;
-    }
-    if (mangaFilterLewd != null &&
-        (mangaFilterLewd ^
-            isAdultManga(manga.source?.contentWarning, manga.genre))) {
       return false;
     }
     final fields = manga.filterFields(trackerNames);

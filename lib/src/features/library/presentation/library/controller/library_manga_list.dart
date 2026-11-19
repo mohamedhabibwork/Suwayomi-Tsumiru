@@ -17,16 +17,28 @@ import '../../../../../utils/crash/redact_tokens.dart';
 import '../../../../../utils/extensions/custom_extensions.dart';
 import '../../../../../widgets/manga_cover/providers/manga_cover_providers.dart';
 import '../../../../auth/data/auth_credentials_store.dart';
+import '../../../../browse_center/domain/content_rating.dart';
 import '../../../../manga_book/domain/manga/manga_model.dart';
+import '../../../../settings/presentation/browse/widgets/show_nsfw_switch/show_nsfw_switch.dart';
 import '../../../data/category_repository.dart';
 
 part 'library_manga_list.g.dart';
+
+bool isLibraryMangaNsfw(MangaDto m) => isAdultManga(
+  m.source?.contentWarning,
+  m.genre,
+  userTags: m.metaData.userTags,
+  title: m.title,
+  sourceName: m.source?.displayName ?? m.source?.name,
+);
 
 @riverpod
 Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
   final sessionCurrent = watchAuthSession(ref);
   bool current() => ref.mounted && sessionCurrent();
   if (!current()) return null;
+  final showNsfw = ref.watch(showNSFWProvider).ifNull(false);
+  final onlyNsfw = showNsfw && ref.watch(onlyNsfwModeProvider).ifNull(false);
   final offlineDb = ref.watch(offlineReadDatabaseProvider);
   final categoryRepository = ref.watch(categoryRepositoryProvider);
   // Only the optional continue-reading button needs the costly first-unread query.
@@ -92,6 +104,13 @@ Future<List<MangaDto>?> libraryMangaList(Ref ref) async {
     }
     // Warm covers even for unopened series so they remain available offline.
     unawaited(coverWarmer.warmLibraryCovers(list));
+  }
+  if (list == null) return null;
+  if (!showNsfw) {
+    return list.where((m) => !isLibraryMangaNsfw(m)).toList();
+  }
+  if (onlyNsfw) {
+    return list.where(isLibraryMangaNsfw).toList();
   }
   return list;
 }

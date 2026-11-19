@@ -62,8 +62,6 @@ class ExtensionStoreScreen extends ConsumerWidget {
       ref.refresh(extensionStoreListProvider.future);
     }, ref.read(toastProvider));
 
-    Future<void> addKeiyoushiStore() => addPresetStore(kKeiyoushiStoreUrl);
-
     final topBar = showsMergedTopBar(context);
     final title = Text(context.l10n.extensionStores);
     final actions = <Widget>[
@@ -144,29 +142,16 @@ class ExtensionStoreScreen extends ConsumerWidget {
                     if (stores.isEmpty) {
                       return Emoticons(
                         title: context.l10n.extensionStoresEmpty,
-                        button: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (canManage)
-                              FilledButton.icon(
-                                onPressed: addKeiyoushiStore,
-                                icon: const Icon(FluentIcons.add_24_regular),
-                                label: const Text(
-                                  'Add Default Stores (Manga, Videos & Else)',
-                                ),
-                              ),
-                            TextButton.icon(
-                              onPressed: () => launchUrlInWeb(
-                                context,
-                                kStoreHelpUrl,
-                                ref.read(toastProvider),
-                              ),
-                              icon: const Icon(
-                                FluentIcons.question_circle_24_regular,
-                              ),
-                              label: Text(context.l10n.help),
-                            ),
-                          ],
+                        button: TextButton.icon(
+                          onPressed: () => launchUrlInWeb(
+                            context,
+                            kStoreHelpUrl,
+                            ref.read(toastProvider),
+                          ),
+                          icon: const Icon(
+                            FluentIcons.question_circle_24_regular,
+                          ),
+                          label: Text(context.l10n.help),
                         ),
                       );
                     }
